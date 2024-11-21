@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>Blacklist Monitoring</h2>
+            <p class="text-muted">Monitor your domains and IP addresses across 200+ blacklist services.</p>
+        </div>
+    </div>
+
+    <!-- Add New Monitor Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Add Domain or IP to Monitor</h5>
+            <form method="POST" class="row g-3">
+                <div class="col-md-5">
+                    <input type="text" class="form-control" name="domain" placeholder="Enter domain (optional)">
+                </div>
+                <div class="col-md-5">
+                    <input type="text" class="form-control" name="ip_address" placeholder="Enter IP address (optional)">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-plus"></i> Add
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Monitored Items -->
+    {% if monitors %}
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title mb-4">Monitored Items</h5>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Domain/IP</th>
+                            <th>Type</th>
+                            <th>Last Check</th>
+                            <th>Status</th>
+                            <th>Active Listings</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for monitor in monitors %}
+                        <tr>
+                            <td>{{ monitor.domain or monitor.ip_address }}</td>
+                            <td>
+                                {% if monitor.domain %}
+                                <span class="badge bg-info">Domain</span>
+                                {% else %}
+                                <span class="badge bg-secondary">IPv{{ monitor.ip_version }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ monitor.last_checked.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if monitor.status == 'clean' else 'danger' if monitor.status == 'listed' else 'warning' }}">
+                                    {{ monitor.status.title() }}
+                                </span>
+                            </td>
+                            <td>
+                                {% set active_listings = monitor.blacklist_entries|selectattr('status', 'equalto', 'active')|list %}
+                                {% if active_listings %}
+                                <span class="badge bg-danger">{{ active_listings|length }} Active</span>
+                                {% else %}
+                                <span class="badge bg-success">Clean</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" title="View Details">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger" title="Remove">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-shield-alt fa-3x mb-3 text-muted"></i>
+        <p class="text-muted">No items are currently being monitored. Add a domain or IP address to start monitoring.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

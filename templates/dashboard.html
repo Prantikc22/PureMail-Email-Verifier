@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2>Welcome back, {{ current_user.username }}!</h2>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card feature-card h-100">
+                <div class="card-body">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-envelope-open-text"></i>
+                    </div>
+                    <h5 class="card-title">Verify Emails</h5>
+                    <p class="card-text">Upload your email list and verify them instantly with our advanced verification system.</p>
+                    <a href="{{ url_for('verify') }}" class="btn btn-primary">
+                        Start Verification
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
+            <div class="card feature-card h-100">
+                <div class="card-body">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-history"></i>
+                    </div>
+                    <h5 class="card-title">View History</h5>
+                    <p class="card-text">Access your past verification results and download detailed reports.</p>
+                    <a href="{{ url_for('history') }}" class="btn btn-primary">View History</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
+            <div class="card feature-card h-100">
+                <div class="card-body">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <h5 class="card-title">Profile Settings</h5>
+                    <p class="card-text">Manage your account settings and preferences.</p>
+                    <a href="{{ url_for('profile') }}" class="btn btn-primary">View Profile</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,413 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h2 class="fw-bold">Email Verification</h2>
+        <p class="text-muted">Verify your email list with our advanced AI-powered system</p>
+    </div>
+
+    <!-- Upload Area -->
+    <div class="upload-section bg-white rounded-lg shadow-sm p-5 mb-5">
+        <div class="drop-zone" id="dropZone">
+            <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+            <h4>Drag & Drop Your File Here</h4>
+            <p class="text-muted">or</p>
+            <button class="btn btn-outline-primary px-4" onclick="document.getElementById('emailFile').click()">
+                Choose File
+            </button>
+            <p class="mt-2 text-muted small">Supported formats: CSV, TXT, Excel</p>
+            <input type="file" id="emailFile" style="display: none;" accept=".csv,.txt,.xlsx,.xls">
+        </div>
+
+        <!-- File Info -->
+        <div id="fileInfo" class="file-info mt-4" style="display: none;">
+            <div class="d-flex align-items-center justify-content-center">
+                <i class="fas fa-file-alt text-primary me-2"></i>
+                <span id="fileName" class="me-3"></span>
+                <button class="btn btn-link text-danger p-0" onclick="clearFile()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Verify Button -->
+        <div class="text-center mt-4">
+            <button id="verifyBtn" class="btn btn-primary btn-lg px-5" style="display: none;">
+                <i class="fas fa-check-circle me-2"></i>Verify Now
+            </button>
+        </div>
+
+        <!-- Progress -->
+        <div id="progressContainer" class="mt-4" style="display: none;">
+            <div class="progress" style="height: 10px;">
+                <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"></div>
+            </div>
+            <p id="progressText" class="text-center text-muted mt-2"></p>
+        </div>
+
+        <!-- Stats -->
+        <div id="statsContainer" class="mt-5" style="display: none;">
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <i class="fas fa-envelope-open text-primary mb-2"></i>
+                            <h3 id="totalEmails">0</h3>
+                            <p>Total Emails</p>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-check-circle text-success mb-2"></i>
+                            <h3 id="validEmails">0</h3>
+                            <p>Valid Emails</p>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-times-circle text-danger mb-2"></i>
+                            <h3 id="invalidFormat">0</h3>
+                            <p>Invalid Format</p>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-shield-alt text-warning mb-2"></i>
+                            <h3 id="disposable">0</h3>
+                            <p>Disposable</p>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-exclamation-triangle text-info mb-2"></i>
+                            <h3 id="dnsErrors">0</h3>
+                            <p>DNS Errors</p>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-user-tie text-secondary mb-2"></i>
+                            <h3 id="roleBased">0</h3>
+                            <p>Role-based</p>
+                        </div>
+                    </div>
+
+                    <!-- AI Score -->
+                    <div class="ai-score-card mt-4">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <h4 class="mb-0">AI Score</h4>
+                                <p class="text-muted mb-0">Average email quality score</p>
+                            </div>
+                            <div class="score-circle">
+                                <span id="avgScore">0</span>
+                                <small>/10</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Download Button -->
+                    <div class="text-center mt-4">
+                        <button id="downloadBtn" class="btn btn-success btn-lg" style="display: none;">
+                            <i class="fas fa-download me-2"></i>Download Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Features -->
+    <div class="row mt-5">
+        <div class="col-md-3">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <h4>Advanced Validation</h4>
+                <p>Multi-layer verification including syntax, domain, and mailbox validation</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <h4>AI-Powered</h4>
+                <p>Smart scoring system to evaluate email quality and engagement potential</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-ban"></i>
+                </div>
+                <h4>Disposable Detection</h4>
+                <p>Identify and filter out temporary and disposable email addresses</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-bolt"></i>
+                </div>
+                <h4>Real-time Processing</h4>
+                <p>Fast and efficient verification with instant results</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.drop-zone {
+    border: 2px dashed #dee2e6;
+    border-radius: 1rem;
+    padding: 3rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    background: #f8f9fa;
+}
+
+.drop-zone:hover, .drop-zone.dragover {
+    border-color: #0d6efd;
+    background: rgba(13, 110, 253, 0.05);
+}
+
+.file-info {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    display: inline-block;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 1rem;
+    text-align: center;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.stat-card h3 {
+    font-size: 2rem;
+    margin: 0.5rem 0;
+    font-weight: 600;
+}
+
+.stat-card p {
+    color: #6c757d;
+    margin: 0;
+}
+
+.ai-score-card {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 1rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.score-circle {
+    background: #f8f9fa;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+
+.score-circle span {
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.score-circle small {
+    color: #6c757d;
+}
+
+.feature-card {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 1rem;
+    text-align: center;
+    height: 100%;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: transform 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+}
+
+.feature-icon {
+    width: 60px;
+    height: 60px;
+    background: #f8f9fa;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+}
+
+.feature-icon i {
+    font-size: 1.5rem;
+    color: #0d6efd;
+}
+
+.feature-card h4 {
+    margin-bottom: 1rem;
+    color: #212529;
+}
+
+.feature-card p {
+    color: #6c757d;
+    margin: 0;
+    font-size: 0.9rem;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('emailFile');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const verifyBtn = document.getElementById('verifyBtn');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const statsContainer = document.getElementById('statsContainer');
+    const downloadBtn = document.getElementById('downloadBtn');
+    let selectedFile = null;
+
+    function handleDragOver(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.add('dragover');
+    }
+
+    function handleDragLeave(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.remove('dragover');
+    }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length) {
+            handleFile(files[0]);
+        }
+    }
+
+    function handleFile(file) {
+        const validTypes = ['.csv', '.txt', '.xlsx', '.xls'];
+        const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+        
+        if (!validTypes.includes(fileExtension)) {
+            alert('Please upload a valid file type (CSV, TXT, XLS, XLSX)');
+            return;
+        }
+
+        selectedFile = file;
+        fileName.textContent = file.name;
+        fileInfo.style.display = 'block';
+        verifyBtn.style.display = 'block';
+        statsContainer.style.display = 'none';
+        downloadBtn.style.display = 'none';
+    }
+
+    function clearFile() {
+        fileInput.value = '';
+        selectedFile = null;
+        fileInfo.style.display = 'none';
+        verifyBtn.style.display = 'none';
+        statsContainer.style.display = 'none';
+        downloadBtn.style.display = 'none';
+    }
+
+    function updateStats(stats) {
+        document.getElementById('totalEmails').textContent = stats.total;
+        document.getElementById('validEmails').textContent = stats.valid;
+        document.getElementById('invalidFormat').textContent = stats.invalid_format;
+        document.getElementById('disposable').textContent = stats.disposable;
+        document.getElementById('dnsErrors').textContent = stats.dns_error;
+        document.getElementById('roleBased').textContent = stats.role_based;
+        document.getElementById('avgScore').textContent = stats.avg_score;
+    }
+
+    dropZone.addEventListener('dragover', handleDragOver);
+    dropZone.addEventListener('dragleave', handleDragLeave);
+    dropZone.addEventListener('drop', handleDrop);
+    dropZone.addEventListener('click', () => fileInput.click());
+    
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            handleFile(e.target.files[0]);
+        }
+    });
+
+    verifyBtn.addEventListener('click', async function() {
+        if (!selectedFile) {
+            alert('Please select a file first');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressText.textContent = 'Starting verification...';
+        verifyBtn.disabled = true;
+
+        try {
+            progressBar.style.width = '30%';
+            progressText.textContent = 'Uploading file...';
+
+            const response = await fetch('/verify', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error('Verification failed');
+            }
+
+            progressBar.style.width = '60%';
+            progressText.textContent = 'Processing results...';
+
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+
+            progressBar.style.width = '100%';
+            progressText.textContent = 'Verification complete!';
+            
+            // Update stats and show results
+            updateStats(data.stats);
+            statsContainer.style.display = 'block';
+            
+            // Enable download button
+            downloadBtn.style.display = 'block';
+            downloadBtn.onclick = () => window.location.href = `/download/${data.verification_id}`;
+
+        } catch (error) {
+            console.error('Error:', error);
+            progressBar.style.width = '100%';
+            progressBar.classList.add('bg-danger');
+            progressText.textContent = `Error: ${error.message}`;
+        } finally {
+            verifyBtn.disabled = false;
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,90 @@
+.feature-box {
+    padding: 2rem;
+    border-radius: 1rem;
+    background: var(--bg-card);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    text-align: center;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.feature-box:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.15);
+}
+
+.feature-icon {
+    width: 70px;
+    height: 70px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-hover);
+    border-radius: 50%;
+    margin-bottom: 1.5rem;
+}
+
+.feature-title {
+    color: var(--text-primary);
+    font-size: 1.25rem;
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+}
+
+.feature-list li {
+    margin-bottom: 0.75rem;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    text-align: left;
+    padding-left: 0.5rem;
+}
+
+.drop-zone {
+    border: 2px dotted var(--border-color);
+    border-radius: 1rem;
+    padding: 2.5rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    background: var(--bg-card);
+    margin: 1rem 0;
+}
+
+.drop-zone.drag-over {
+    border-color: var(--primary);
+    background: var(--bg-hover);
+}
+
+.progress-container {
+    margin-top: 2rem;
+}
+
+.progress {
+    height: 1.5rem;
+    border-radius: 0.75rem;
+    background: var(--bg-hover);
+}
+
+.progress-bar {
+    background-color: var(--primary);
+    border-radius: 0.75rem;
+    transition: width 0.3s ease;
+}
+
+#results {
+    background: var(--bg-card);
+    border-radius: 1rem;
+    padding: 2rem;
+    margin-top: 2rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+}
+
+#downloadBtn {
+    margin-top: 2rem;
+}
+
+.alert {
+    border-radius: 0.75rem;
+    padding: 1rem 1.5rem;
+}

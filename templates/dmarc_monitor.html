@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>DMARC Monitoring</h2>
+            <p class="text-muted">Monitor and protect your domains from email spoofing and phishing attempts.</p>
+        </div>
+    </div>
+
+    <!-- Add New Domain Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Add Domain to Monitor</h5>
+            <form method="POST" class="row g-3">
+                <div class="col-md-8">
+                    <input type="text" class="form-control" name="domain" placeholder="Enter domain (e.g., example.com)" required>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-plus"></i> Add Domain
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Monitored Domains -->
+    {% if dmarc_records %}
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title mb-4">Monitored Domains</h5>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Domain</th>
+                            <th>DMARC Policy</th>
+                            <th>SPF</th>
+                            <th>DKIM</th>
+                            <th>Last Check</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in dmarc_records %}
+                        <tr>
+                            <td>{{ record.domain }}</td>
+                            <td>
+                                {% if record.policy %}
+                                <span class="badge bg-{{ 'success' if record.policy == 'reject' else 'warning' }}">
+                                    {{ record.policy }}
+                                </span>
+                                {% else %}
+                                <span class="badge bg-danger">Not Set</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if record.spf_record %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check"></i> Valid
+                                </span>
+                                {% else %}
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-times"></i> Missing
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if record.dkim_record %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check"></i> Valid
+                                </span>
+                                {% else %}
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-times"></i> Missing
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>{{ record.last_checked.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if record.is_valid else 'danger' }}">
+                                    {{ 'Valid' if record.is_valid else 'Invalid' }}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" title="View Reports">
+                                    <i class="fas fa-chart-bar"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger" title="Remove">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-shield-alt fa-3x mb-3 text-muted"></i>
+        <p class="text-muted">No domains are currently being monitored. Add a domain to start protecting your email.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

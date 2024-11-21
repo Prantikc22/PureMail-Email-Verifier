@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Summary Card -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h2 class="text-2xl font-bold mb-4">Verification Summary</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="p-4 bg-gray-50 rounded-lg">
+                <p class="text-sm text-gray-600">Total Emails</p>
+                <p class="text-2xl font-bold">{{ stats.total_emails }}</p>
+            </div>
+            <div class="p-4 bg-green-50 rounded-lg">
+                <p class="text-sm text-green-600">Valid Emails</p>
+                <p class="text-2xl font-bold text-green-700">{{ stats.valid_emails }}</p>
+            </div>
+            <div class="p-4 bg-red-50 rounded-lg">
+                <p class="text-sm text-red-600">Invalid Emails</p>
+                <p class="text-2xl font-bold text-red-700">{{ stats.invalid_emails }}</p>
+            </div>
+            <div class="p-4 bg-blue-50 rounded-lg">
+                <p class="text-sm text-blue-600">Business Emails</p>
+                <p class="text-2xl font-bold text-blue-700">{{ stats.business_emails }}</p>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+            <div class="p-4 bg-yellow-50 rounded-lg">
+                <p class="text-sm text-yellow-600">Suspicious Emails</p>
+                <p class="text-2xl font-bold text-yellow-700">{{ stats.suspicious_emails }}</p>
+            </div>
+            <div class="p-4 bg-purple-50 rounded-lg">
+                <p class="text-sm text-purple-600">Disposable Emails</p>
+                <p class="text-2xl font-bold text-purple-700">{{ stats.disposable_emails }}</p>
+            </div>
+            <div class="p-4 bg-orange-50 rounded-lg">
+                <p class="text-sm text-orange-600">Typo Suggestions</p>
+                <p class="text-2xl font-bold text-orange-700">{{ stats.typo_suggestions }}</p>
+            </div>
+            <div class="p-4 bg-pink-50 rounded-lg">
+                <p class="text-sm text-pink-600">High Risk TLDs</p>
+                <p class="text-2xl font-bold text-pink-700">{{ stats.high_risk_tlds }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Download Report Button -->
+    <div class="flex justify-center mb-8">
+        <a href="{{ url_for('download', verification_id=verification_id) }}" 
+           class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 flex items-center">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            Download Full Report
+        </a>
+    </div>
+
+    <!-- Results Table -->
+    <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div class="p-6">
+            <h3 class="text-xl font-bold mb-4">Detailed Results</h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead>
+                        <tr class="bg-gray-50">
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issues</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Suggestions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for result in results %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {{ result.email }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                {% if result.is_valid %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                    Valid
+                                </span>
+                                {% else %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                    Invalid
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                {% if result.pattern_analysis.is_business %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                    Business
+                                </span>
+                                {% else %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                    Personal
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-500">
+                                <ul class="list-disc list-inside">
+                                    {% if result.security.is_disposable %}
+                                    <li class="text-red-600">Disposable Email</li>
+                                    {% endif %}
+                                    {% if result.security.is_high_risk_tld %}
+                                    <li class="text-orange-600">High Risk TLD</li>
+                                    {% endif %}
+                                    {% if result.pattern_analysis.is_suspicious %}
+                                    <li class="text-yellow-600">Suspicious Pattern</li>
+                                    {% endif %}
+                                    {% if result.pattern_analysis.possible_typo %}
+                                    <li class="text-purple-600">Possible Typo</li>
+                                    {% endif %}
+                                </ul>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-500">
+                                <ul class="list-disc list-inside">
+                                    {% for suggestion in result.pattern_analysis.suggestions %}
+                                    <li>{{ suggestion }}</li>
+                                    {% endfor %}
+                                    {% for warning in result.security.security_warnings %}
+                                    <li class="text-red-600">{{ warning }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Back to Verify Button -->
+<div class="fixed bottom-8 right-8">
+    <a href="{{ url_for('verify') }}" 
+       class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 flex items-center">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"/>
+        </svg>
+        Verify More Emails
+    </a>
+</div>
+{% endblock %}

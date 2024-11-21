@@ -1,0 +1,201 @@
+{% extends "base_public.html" %}
+
+{% block title %}PureMail - AI-Powered Email Verification Platform{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="bg-gradient-primary text-white py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold mb-4">Verify Emails with AI-Powered Precision</h1>
+                <p class="lead mb-4">PureMail combines advanced AI technology with real-time verification to ensure your email lists are clean, valid, and ready for engagement.</p>
+                <div class="d-flex gap-3">
+                    <a href="{{ url_for('signup') }}" class="btn btn-light btn-lg">Get Started</a>
+                    <a href="#features" class="btn btn-outline-light btn-lg">Learn More</a>
+                </div>
+            </div>
+            <div class="col-lg-6 text-center">
+                <img src="{{ url_for('static', filename='images/email-verification.svg') }}" alt="Email Verification" class="img-fluid" style="max-width: 80%;">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section id="features" class="py-5">
+    <div class="container">
+        <h2 class="text-center mb-5">Why Choose PureMail?</h2>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="feature-icon bg-gradient-primary text-white rounded-circle mx-auto mb-3">
+                            <i class="fas fa-robot fa-2x"></i>
+                        </div>
+                        <h3 class="h4">AI-Powered Verification</h3>
+                        <p class="text-muted">Our advanced AI algorithms analyze multiple factors to provide accurate email verification results.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="feature-icon bg-gradient-primary text-white rounded-circle mx-auto mb-3">
+                            <i class="fas fa-bolt fa-2x"></i>
+                        </div>
+                        <h3 class="h4">Real-Time Processing</h3>
+                        <p class="text-muted">Get instant verification results with our high-performance infrastructure.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="feature-icon bg-gradient-primary text-white rounded-circle mx-auto mb-3">
+                            <i class="fas fa-shield-alt fa-2x"></i>
+                        </div>
+                        <h3 class="h4">Comprehensive Checks</h3>
+                        <p class="text-muted">Multi-layer verification including syntax, domain, and mailbox validation.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Pricing Section -->
+<section class="bg-light py-5">
+    <div class="container">
+        <h2 class="text-center mb-5">Simple, Transparent Pricing</h2>
+        <div class="row g-4 justify-content-center">
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <h3 class="h4 mb-3">Free Trial</h3>
+                        <div class="display-4 mb-3">
+                            <span class="text-success">$0</span>
+                        </div>
+                        <ul class="list-unstyled mb-4">
+                            <li class="mb-2"><i class="fas fa-check text-success me-2"></i>100 Email Credits</li>
+                            <li class="mb-2"><i class="fas fa-check text-success me-2"></i>AI-Powered Verification</li>
+                            <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Real-Time Results</li>
+                            <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Basic Support</li>
+                        </ul>
+                        <a href="{{ url_for('signup') }}" class="btn btn-primary btn-lg w-100">
+                            Start Free Trial
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Testimonials -->
+<section class="py-5">
+    <div class="container">
+        <h2 class="text-center mb-5">What Our Users Say</h2>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                        </div>
+                        <p class="mb-3">"PureMail has revolutionized our email marketing. The AI-powered verification is incredibly accurate!"</p>
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-circle bg-gradient-primary text-white p-2 me-3">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-0">John Smith</h5>
+                                <small class="text-muted">Marketing Director</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                        </div>
+                        <p class="mb-3">"The real-time processing and comprehensive checks have saved us countless hours of manual work."</p>
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-circle bg-gradient-primary text-white p-2 me-3">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-0">Sarah Johnson</h5>
+                                <small class="text-muted">Email Manager</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                        </div>
+                        <p class="mb-3">"Best investment for our email marketing campaigns. The AI technology is truly game-changing!"</p>
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-circle bg-gradient-primary text-white p-2 me-3">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-0">Mike Wilson</h5>
+                                <small class="text-muted">Business Owner</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Call to Action -->
+<section class="bg-gradient-primary text-white py-5">
+    <div class="container text-center">
+        <h2 class="mb-4">Ready to Transform Your Email Marketing?</h2>
+        <p class="lead mb-4">Join thousands of satisfied users who trust PureMail for their email verification needs.</p>
+        <a href="{{ url_for('signup') }}" class="btn btn-light btn-lg">
+            Get Started Today
+        </a>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer text-white py-5">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="d-flex align-items-center mb-3">
+                    <img src="{{ url_for('static', filename='images/puremail-logo.svg') }}" alt="PureMail" height="40" class="me-3">
+                    <img src="{{ url_for('static', filename='images/logicwerk-logo.svg') }}" alt="Logicwerk" height="30">
+                </div>
+                <p class="text-muted mb-0">A Logicwerk Solution</p>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <p class="mb-0 text-muted">&copy; 2024 PureMail. All rights reserved.</p>
+            </div>
+        </div>
+    </div>
+</footer>
+{% endblock %}
