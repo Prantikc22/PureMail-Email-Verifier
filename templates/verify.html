@@ -2,226 +2,356 @@
 
 {% block content %}
 <div class="container py-4">
-    <h2 class="mb-4">Verify Email Addresses</h2>
-
-    <!-- Upload Area -->
-    <div class="upload-area bg-white p-5 rounded shadow-sm text-center mb-4">
-        <form id="uploadForm" action="{{ url_for('verify') }}" method="post" enctype="multipart/form-data" class="mb-4">
-            <div class="drag-drop-area p-5 mb-4 rounded border border-dashed" id="dropZone">
-                <i class="bi bi-cloud-upload text-primary mb-3" style="font-size: 3rem;"></i>
-                <h4>Drag & Drop Files Here</h4>
-                <p class="text-muted">or</p>
-                <label for="file" class="btn btn-primary">
-                    Choose File
-                    <input type="file" id="file" name="file" accept=".csv,.txt,.xlsx" style="display: none;" onchange="handleFileSelect(this)">
-                </label>
-                <p class="mt-2 text-muted small">Supported formats: CSV, TXT, Excel</p>
-            </div>
-            <div id="fileInfo" class="alert alert-info" style="display: none;">
-                <span id="fileName"></span>
-                <button type="button" class="btn-close" aria-label="Close" onclick="clearFile()"></button>
-            </div>
-            <button type="submit" class="btn btn-success btn-lg" id="submitBtn" style="display: none;">
-                <i class="bi bi-check-circle me-2"></i>Start Verification
-            </button>
-        </form>
-    </div>
-
-    <!-- Feature Boxes -->
     <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="feature-card bg-white shadow-sm">
-                <i class="bi bi-shield-check text-primary mb-3" style="font-size: 2rem;"></i>
-                <h5>Advanced Validation</h5>
-                <p class="text-muted">Multi-layer verification including syntax, domain, and mailbox validation</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="feature-card bg-white shadow-sm">
-                <i class="bi bi-graph-up text-success mb-3" style="font-size: 2rem;"></i>
-                <h5>AI-Powered Analysis</h5>
-                <p class="text-muted">Smart scoring system to evaluate email quality and engagement potential</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="feature-card bg-white shadow-sm">
-                <i class="bi bi-shield-x text-danger mb-3" style="font-size: 2rem;"></i>
-                <h5>Disposable Detection</h5>
-                <p class="text-muted">Identify and filter out temporary and disposable email addresses</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="feature-card bg-white shadow-sm">
-                <i class="bi bi-lightning text-warning mb-3" style="font-size: 2rem;"></i>
-                <h5>Real-time Processing</h5>
-                <p class="text-muted">Fast and efficient verification with instant results</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Results Area -->
-    <div id="resultsArea" style="display: none;">
-        <div class="bg-white p-4 rounded shadow-sm">
-            <h4 class="mb-4">Verification Results</h4>
-            <div class="progress mb-4" style="height: 25px;">
-                <div class="progress-bar bg-success" role="progressbar" style="width: 0%" id="progressBar">
-                    <span id="progressText">0%</span>
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h4 class="card-title mb-4">Email Verification</h4>
+                    <form id="upload-form" method="POST" enctype="multipart/form-data">
+                        {{ form.csrf_token }}
+                        <div class="upload-box" id="drop-zone">
+                            <div class="upload-content text-center">
+                                <i class="fas fa-cloud-upload-alt fa-3x mb-3"></i>
+                                <h5>Drag and drop your file here</h5>
+                                <p class="text-muted">or</p>
+                                {{ form.file(class="d-none", accept=".csv,.xlsx,.xls") }}
+                                <button type="button" class="btn btn-primary" onclick="document.getElementById('file').click()">
+                                    <i class="fas fa-folder-open me-2"></i>Browse Files
+                                </button>
+                                <p class="mt-2 text-muted small">Supported formats: .csv, .xlsx, .xls</p>
+                            </div>
+                            <div id="file-info" class="text-center mt-3" style="display: none;">
+                                <p class="mb-2"><i class="fas fa-file-alt me-2"></i><span id="filename"></span></p>
+                                <button type="submit" class="btn btn-success" id="verify-btn">
+                                    <i class="fas fa-check-circle me-2"></i>Verify Now
+                                </button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
             </div>
-            <div class="table-responsive">
-                <table class="table table-hover" id="resultsTable">
-                    <thead>
-                        <tr>
-                            <th>Email</th>
-                            <th>Status</th>
-                            <th>Details</th>
-                            <th>Score</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+        </div>
+    </div>
+
+    <!-- Results Section -->
+    <div id="results" style="display: none;">
+        <div class="row g-4">
+            <!-- Basic Stats -->
+            <div class="col-md-3">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-2">Total Emails</h6>
+                        <h3 id="total-emails" class="mb-0">0</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-2">Valid Emails</h6>
+                        <h3 id="valid-emails" class="mb-0">0</h3>
+                        <div class="progress mt-2" style="height: 4px;">
+                            <div id="valid-progress" class="progress-bar bg-success" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-2">Invalid Emails</h6>
+                        <h3 id="invalid-emails" class="mb-0">0</h3>
+                        <div class="progress mt-2" style="height: 4px;">
+                            <div id="invalid-progress" class="progress-bar bg-danger" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-2">AI Analysis Score</h6>
+                        <h3 id="ai-score" class="mb-0">0</h3>
+                        <div class="progress mt-2" style="height: 4px;">
+                            <div id="ai-progress" class="progress-bar bg-primary" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Stats -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="card-title mb-0">AI Analysis</h5>
+                            <button class="btn btn-primary" id="download-btn">
+                                <i class="fas fa-download me-2"></i>Download Report
+                            </button>
+                        </div>
+                        <div class="row g-4" id="detailed-stats">
+                            <!-- AI Scores -->
+                            <div class="col-md-4">
+                                <div class="p-3 rounded bg-light">
+                                    <h6 class="mb-3">Reply Score</h6>
+                                    <div class="d-flex align-items-center mb-2">
+                                        <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                            <div id="reply-score-progress" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                        </div>
+                                        <span id="reply-score" class="badge rounded-pill"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="p-3 rounded bg-light">
+                                    <h6 class="mb-3">Person Score</h6>
+                                    <div class="d-flex align-items-center mb-2">
+                                        <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                            <div id="person-score-progress" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                        </div>
+                                        <span id="person-score" class="badge rounded-pill"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="p-3 rounded bg-light">
+                                    <h6 class="mb-3">Engagement Score</h6>
+                                    <div class="d-flex align-items-center mb-2">
+                                        <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                            <div id="engagement-score-progress" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                        </div>
+                                        <span id="engagement-score" class="badge rounded-pill"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <style>
-.drag-drop-area {
-    border: 2px dashed #ccc;
+.upload-box {
+    border: 2px dashed #dee2e6;
     border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
     transition: all 0.3s ease;
 }
 
-.drag-drop-area.drag-over {
+.upload-box.dragover {
     border-color: #0d6efd;
     background-color: rgba(13, 110, 253, 0.05);
 }
 
-.feature-card {
-    padding: 1.5rem;
-    border-radius: 8px;
-    text-align: center;
-    height: 100%;
-    transition: transform 0.2s;
+.upload-content {
+    max-width: 400px;
+    margin: 0 auto;
 }
 
-.feature-card:hover {
-    transform: translateY(-5px);
+.progress {
+    background-color: #e9ecef;
+    border-radius: 2px;
+}
+
+.badge {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
 }
 </style>
 
 <script>
-    function handleFileSelect(input) {
-        const file = input.files[0];
-        if (file) {
-            document.getElementById('fileInfo').style.display = 'block';
-            document.getElementById('fileName').textContent = file.name;
-            document.getElementById('submitBtn').style.display = 'block';
-        }
+document.addEventListener('DOMContentLoaded', function() {
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.querySelector('input[type="file"]');
+    const fileInfo = document.getElementById('file-info');
+    const fileName = document.getElementById('filename');
+    const uploadForm = document.getElementById('upload-form');
+    const verifyBtn = document.getElementById('verify-btn');
+    const resultsSection = document.getElementById('results');
+    const downloadBtn = document.getElementById('download-btn');
+
+    // Prevent default drag behaviors
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+        document.body.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
     }
 
-    function clearFile() {
-        document.getElementById('file').value = '';
-        document.getElementById('fileInfo').style.display = 'none';
-        document.getElementById('submitBtn').style.display = 'none';
+    // Highlight drop zone when item is dragged over it
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight(e) {
+        dropZone.classList.add('dragover');
     }
 
-    // Drag and drop handling
-    const dropZone = document.getElementById('dropZone');
+    function unhighlight(e) {
+        dropZone.classList.remove('dragover');
+    }
 
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('drag-over');
+    // Handle dropped files
+    dropZone.addEventListener('drop', handleDrop, false);
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        handleFiles(files);
+    }
+
+    fileInput.addEventListener('change', function(e) {
+        handleFiles(this.files);
     });
 
-    dropZone.addEventListener('dragleave', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('drag-over');
-    });
-
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('drag-over');
-        const file = e.dataTransfer.files[0];
-        if (file) {
-            const input = document.getElementById('file');
-            input.files = e.dataTransfer.files;
-            handleFileSelect(input);
-        }
-    });
-
-    // Form submission handling
-    document.getElementById('uploadForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const formData = new FormData(this);
-        const submitBtn = document.getElementById('submitBtn');
-        const resultsArea = document.getElementById('resultsArea');
-        const progressBar = document.getElementById('progressBar');
-        const progressText = document.getElementById('progressText');
-        const resultsTable = document.getElementById('resultsTable').getElementsByTagName('tbody')[0];
-
-        submitBtn.disabled = true;
-        resultsArea.style.display = 'block';
-        resultsTable.innerHTML = '';
-
-        try {
-            const response = await fetch("{{ url_for('verify') }}", {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
+    function handleFiles(files) {
+        if (files.length) {
+            const file = files[0];
+            if (validateFile(file)) {
+                showFileInfo(file);
             }
-
-            const results = await response.json();
-            let validCount = 0;
-
-            results.forEach((result, index) => {
-                if (result.valid) validCount++;
-                
-                const progress = Math.round(((index + 1) / results.length) * 100);
-                progressBar.style.width = `${progress}%`;
-                progressText.textContent = `${progress}%`;
-
-                const row = resultsTable.insertRow();
-                row.innerHTML = `
-                    <td>${result.email}</td>
-                    <td>
-                        <span class="badge bg-${result.valid ? 'success' : 'danger'}">
-                            ${result.valid ? 'Valid' : 'Invalid'}
-                        </span>
-                    </td>
-                    <td>${result.reason || 'N/A'}</td>
-                    <td>
-                        <div class="d-flex align-items-center">
-                            <div class="progress" style="width: 100px; height: 10px;">
-                                <div class="progress-bar bg-${getScoreColor(result.reply_score)}" 
-                                     style="width: ${result.reply_score * 10}%">
-                                </div>
-                            </div>
-                            <span class="ms-2">${result.reply_score}/10</span>
-                        </div>
-                    </td>
-                `;
-            });
-
-            const validRatio = (validCount / results.length * 100).toFixed(1);
-            progressBar.style.width = '100%';
-            progressText.textContent = `Complete: ${validRatio}% Valid`;
-
-        } catch (error) {
-            console.error('Error:', error);
-            alert('An error occurred during verification. Please try again.');
-        } finally {
-            submitBtn.disabled = false;
         }
-    });
+    }
+
+    function validateFile(file) {
+        const validTypes = ['.csv', '.xlsx', '.xls'];
+        const maxSize = 10 * 1024 * 1024; // 10MB
+
+        if (!validTypes.some(type => file.name.toLowerCase().endsWith(type.toLowerCase()))) {
+            showAlert('Please upload a valid CSV or Excel file.', 'error');
+            resetFileInput();
+            return false;
+        }
+
+        if (file.size > maxSize) {
+            showAlert('File size exceeds 10MB limit.', 'error');
+            resetFileInput();
+            return false;
+        }
+
+        return true;
+    }
+
+    function showFileInfo(file) {
+        fileName.textContent = file.name;
+        fileInfo.style.display = 'block';
+    }
+
+    function resetFileInput() {
+        fileInput.value = '';
+        fileInfo.style.display = 'none';
+        fileName.textContent = '';
+        resultsSection.style.display = 'none';
+    }
+
+    function showAlert(message, type = 'error') {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type === 'error' ? 'danger' : 'success'} mt-3`;
+        alertDiv.innerHTML = `
+            <i class="fas fa-${type === 'error' ? 'exclamation' : 'check'}-circle me-2"></i>
+            ${message}
+        `;
+        const uploadBox = document.querySelector('.upload-box');
+        uploadBox.insertAdjacentElement('beforebegin', alertDiv);
+
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 5000);
+    }
 
     function getScoreColor(score) {
-        if (score >= 8) return 'success';
-        if (score >= 5) return 'warning';
-        return 'danger';
+        if (score > 7) return 'bg-success';
+        if (score >= 4) return 'bg-warning';
+        return 'bg-danger';
     }
+
+    function updateResults(results) {
+        // Update statistics
+        document.getElementById('total-emails').textContent = results.total_emails;
+        document.getElementById('valid-emails').textContent = results.valid_emails;
+        document.getElementById('invalid-emails').textContent = 
+            results.invalid_format + results.disposable + results.dns_error + results.role_based;
+        document.getElementById('ai-score').textContent = results.avg_score.toFixed(2);
+
+        // Calculate percentages
+        const totalEmails = results.total_emails || 1; // Prevent division by zero
+        const validPercent = (results.valid_emails / totalEmails) * 100;
+        const invalidPercent = ((results.invalid_format + results.disposable + results.dns_error + results.role_based) / totalEmails) * 100;
+        const aiPercent = (results.avg_score / 10) * 100;
+
+        // Update progress bars
+        document.getElementById('valid-progress').style.width = `${validPercent}%`;
+        document.getElementById('invalid-progress').style.width = `${invalidPercent}%`;
+        document.getElementById('ai-progress').style.width = `${aiPercent}%`;
+
+        // Update AI scores
+        document.getElementById('reply-score-progress').style.width = `${(results.reply_score / 10) * 100}%`;
+        document.getElementById('reply-score').textContent = results.reply_score.toFixed(2);
+        document.getElementById('reply-score').className = `badge ${getScoreColor(results.reply_score)}`;
+
+        document.getElementById('person-score-progress').style.width = `${(results.person_score / 10) * 100}%`;
+        document.getElementById('person-score').textContent = results.person_score.toFixed(2);
+        document.getElementById('person-score').className = `badge ${getScoreColor(results.person_score)}`;
+
+        document.getElementById('engagement-score-progress').style.width = `${(results.engagement_score / 10) * 100}%`;
+        document.getElementById('engagement-score').textContent = results.engagement_score.toFixed(2);
+        document.getElementById('engagement-score').className = `badge ${getScoreColor(results.engagement_score)}`;
+
+        // Show results section and enable download button
+        resultsSection.style.display = 'block';
+        downloadBtn.href = results.download_url;
+    }
+
+    downloadBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        const url = this.href;
+        if (url) {
+            window.location.href = url;
+        }
+    });
+
+    uploadForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        verifyBtn.disabled = true;
+        verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Verifying...';
+        
+        fetch('/verify', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('File processed successfully!', 'success');
+                updateResults(data.results);
+            } else {
+                throw new Error(data.error || 'An error occurred while processing the file.');
+            }
+        })
+        .catch(error => {
+            showAlert(error.message || 'An error occurred while processing the file.', 'error');
+            console.error('Error:', error);
+            resetFileInput();
+        })
+        .finally(() => {
+            verifyBtn.disabled = false;
+            verifyBtn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Verify Now';
+        });
+    });
+});
 </script>
 {% endblock %}

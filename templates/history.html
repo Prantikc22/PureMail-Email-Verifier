@@ -1,79 +1,54 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container py-4">
-    <h2 class="mb-4">Verification History</h2>
-
-    {% if verifications %}
-    <div class="table-responsive">
-        <table class="table table-hover">
-            <thead class="table-light">
-                <tr>
-                    <th>Date</th>
-                    <th>File Name</th>
-                    <th>Total Emails</th>
-                    <th style="width: 40%;">Results</th>
-                    <th>Status</th>
-                    <th class="text-center">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for verification in verifications %}
-                <tr>
-                    <td>{{ verification.date.strftime('%Y-%m-%d %H:%M') }}</td>
-                    <td>{{ verification.filename }}</td>
-                    <td>{{ verification.total_emails or 0 }}</td>
-                    <td>
-                        <div class="progress mb-2" style="height: 20px;">
-                            {% set valid_emails = verification.valid_emails or 0 %}
-                            {% set total_emails = verification.total_emails or 0 %}
-                            {% set valid_percent = (valid_emails / total_emails * 100) if total_emails > 0 else 0 %}
-                            {% set invalid_percent = 100 - valid_percent %}
-                            
-                            <div class="progress-bar bg-success" role="progressbar" 
-                                 style="width: {{ valid_percent }}%" 
-                                 title="Valid: {{ valid_emails }} ({{ '%.1f'|format(valid_percent) }}%)">
-                                {{ valid_emails }} Valid
-                            </div>
-                            <div class="progress-bar bg-danger" role="progressbar" 
-                                 style="width: {{ invalid_percent }}%" 
-                                 title="Invalid: {{ total_emails - valid_emails }} ({{ '%.1f'|format(invalid_percent) }}%)">
-                                {{ total_emails - valid_emails }} Invalid
-                            </div>
-                        </div>
-                        <div class="verification-stats small">
-                            <span class="me-3">Valid: {{ valid_emails }}</span>
-                            <span class="me-3">Invalid Format: {{ verification.invalid_format or 0 }}</span>
-                            <span class="me-3">Disposable: {{ verification.disposable or 0 }}</span>
-                            <span class="me-3">Role-based: {{ verification.role_based or 0 }}</span>
-                            <span>DNS Error: {{ verification.dns_error or 0 }}</span>
-                        </div>
-                    </td>
-                    <td>
-                        <span class="badge bg-{{ 'success' if verification.status.lower() == 'completed' else 'warning' }}">
-                            {{ verification.status }}
-                        </span>
-                    </td>
-                    <td class="text-center">
-                        {% if verification.status.lower() == 'completed' %}
-                        <a href="{{ url_for('download', verification_id=verification.id) }}" 
-                           class="btn btn-primary btn-sm d-flex align-items-center justify-content-center gap-2"
-                           style="width: fit-content; margin: 0 auto; white-space: nowrap;">
-                            <i class="fas fa-download"></i>
-                            <span>Download Report</span>
-                        </a>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<div class="container">
+    <div class="card">
+        <div class="card-header">
+            <h4 class="mb-0">Verification History</h4>
+        </div>
+        <div class="card-body">
+            {% if verifications %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Total Emails</th>
+                            <th>Valid</th>
+                            <th>Invalid</th>
+                            <th>Average Score</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for verification in verifications %}
+                        <tr>
+                            <td>{{ verification.date.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            <td>{{ verification.total_emails }}</td>
+                            <td class="text-success">{{ verification.valid_emails }}</td>
+                            <td class="text-danger">{{ verification.total_emails - verification.valid_emails }}</td>
+                            <td>{{ "%.2f"|format(verification.avg_score or 0) }}</td>
+                            <td>
+                                <a href="{{ url_for('download_report', verification_id=verification.id) }}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-download me-1"></i> Download Report
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No verification history yet</h5>
+                <p class="text-muted">Your email verification history will appear here</p>
+                <a href="{{ url_for('verify') }}" class="btn btn-primary mt-2">
+                    <i class="fas fa-check-circle me-2"></i>Start Verification
+                </a>
+            </div>
+            {% endif %}
+        </div>
     </div>
-    {% else %}
-    <div class="text-center py-5">
-        <i class="fas fa-history fa-3x mb-3 text-muted"></i>
-        <p class="text-muted">No verification history yet. Start by verifying your first email list!</p>
-    </div>
-    {% endif %}
 </div>
 {% endblock %}

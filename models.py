@@ -26,8 +26,15 @@ class Verification(db.Model):
     role_based = db.Column(db.Integer, default=0)
     dns_error = db.Column(db.Integer, default=0)
     status = db.Column(db.String(20), default='Pending')
+    results = db.Column(db.Text)  # JSON string of detailed results
     
-    # New fields for advanced verification
+    # AI Scoring fields
+    avg_score = db.Column(db.Float, default=0.0)
+    reply_score = db.Column(db.Float, default=0.0)
+    person_score = db.Column(db.Float, default=0.0)
+    engagement_score = db.Column(db.Float, default=0.0)
+    
+    # Relationships
     catch_all_scores = db.relationship('CatchAllScore', backref='verification', lazy=True)
 
 class DMARCRecord(db.Model):

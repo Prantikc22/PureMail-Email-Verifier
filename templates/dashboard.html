@@ -2,53 +2,168 @@
 
 {% block content %}
 <div class="container py-4">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h2>Welcome back, {{ current_user.username }}!</h2>
+    <h1 class="mb-4">Welcome, {{ current_user.username }}!</h1>
+    
+    <!-- Statistics Cards -->
+    <div class="row g-4 mb-5">
+        <!-- Total Verifications -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm stat-card bg-gradient">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-2">Total Verifications</h6>
+                            <h3 class="mb-0">{{ stats.total_verifications }}</h3>
+                        </div>
+                        <div class="stat-icon bg-primary bg-opacity-10">
+                            <i class="fas fa-check-double text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Valid Emails -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm stat-card bg-gradient">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-2">Valid Emails</h6>
+                            <h3 class="mb-0">{{ stats.valid_emails }}</h3>
+                        </div>
+                        <div class="stat-icon bg-success bg-opacity-10">
+                            <i class="fas fa-envelope-circle-check text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Invalid Emails -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm stat-card bg-gradient">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-2">Invalid Emails</h6>
+                            <h3 class="mb-0">{{ stats.invalid_emails }}</h3>
+                        </div>
+                        <div class="stat-icon bg-danger bg-opacity-10">
+                            <i class="fas fa-times-circle text-danger"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-
-    <div class="row">
-        <div class="col-md-4 mb-4">
-            <div class="card feature-card h-100">
-                <div class="card-body">
-                    <div class="feature-icon mb-3">
-                        <i class="fas fa-envelope-open-text"></i>
+    
+    <!-- Feature Cards -->
+    <div class="row g-4">
+        <!-- Start Verification Box -->
+        <div class="col-md-4">
+            <a href="{{ url_for('verify') }}" class="text-decoration-none">
+                <div class="card h-100 border-0 shadow-sm hover-card">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon mb-3">
+                            <i class="fas fa-rocket text-primary"></i>
+                        </div>
+                        <h3 class="card-title h4 mb-2">Start Verification</h3>
+                        <p class="card-text text-muted small">
+                            Verify emails with AI-powered validation
+                        </p>
                     </div>
-                    <h5 class="card-title">Verify Emails</h5>
-                    <p class="card-text">Upload your email list and verify them instantly with our advanced verification system.</p>
-                    <a href="{{ url_for('verify') }}" class="btn btn-primary">
-                        Start Verification
-                    </a>
                 </div>
-            </div>
+            </a>
         </div>
-
-        <div class="col-md-4 mb-4">
-            <div class="card feature-card h-100">
-                <div class="card-body">
-                    <div class="feature-icon mb-3">
-                        <i class="fas fa-history"></i>
+        
+        <!-- History Box -->
+        <div class="col-md-4">
+            <a href="{{ url_for('history') }}" class="text-decoration-none">
+                <div class="card h-100 border-0 shadow-sm hover-card">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon mb-3">
+                            <i class="fas fa-history text-success"></i>
+                        </div>
+                        <h3 class="card-title h4 mb-2">Verification History</h3>
+                        <p class="card-text text-muted small">
+                            Access past results and reports
+                        </p>
                     </div>
-                    <h5 class="card-title">View History</h5>
-                    <p class="card-text">Access your past verification results and download detailed reports.</p>
-                    <a href="{{ url_for('history') }}" class="btn btn-primary">View History</a>
                 </div>
-            </div>
+            </a>
         </div>
-
-        <div class="col-md-4 mb-4">
-            <div class="card feature-card h-100">
-                <div class="card-body">
-                    <div class="feature-icon mb-3">
-                        <i class="fas fa-user"></i>
+        
+        <!-- Profile Box -->
+        <div class="col-md-4">
+            <a href="{{ url_for('profile') }}" class="text-decoration-none">
+                <div class="card h-100 border-0 shadow-sm hover-card">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon mb-3">
+                            <i class="fas fa-user-gear text-info"></i>
+                        </div>
+                        <h3 class="card-title h4 mb-2">Profile Settings</h3>
+                        <p class="card-text text-muted small">
+                            Manage your account preferences
+                        </p>
                     </div>
-                    <h5 class="card-title">Profile Settings</h5>
-                    <p class="card-text">Manage your account settings and preferences.</p>
-                    <a href="{{ url_for('profile') }}" class="btn btn-primary">View Profile</a>
                 </div>
-            </div>
+            </a>
         </div>
     </div>
 </div>
+
+<style>
+    .hover-card {
+        transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+    }
+    
+    .hover-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+    }
+    
+    .feature-icon {
+        background: rgba(var(--bs-primary-rgb), 0.1);
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+    }
+    
+    .feature-icon i {
+        font-size: 1.5rem;
+    }
+    
+    .stat-card {
+        transition: transform 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-3px);
+    }
+    
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .stat-icon i {
+        font-size: 1.5rem;
+        display: inline-block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    .bg-gradient {
+        background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+    }
+</style>
 {% endblock %}
