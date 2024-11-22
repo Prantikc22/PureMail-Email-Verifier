@@ -28,7 +28,7 @@ from wtforms.validators import DataRequired
 # Initialize app and database
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///emailverifier.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///email_verifier.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB max file size
@@ -104,11 +104,6 @@ class Verification(db.Model):
     person_score = db.Column(db.Float, default=7.0)
     engagement_score = db.Column(db.Float, default=7.0)
 
-# Create all database tables
-with app.app_context():
-    db.drop_all()  # Temporarily drop all tables to recreate with new schema
-    db.create_all()  # Create all tables with new schema including AI score columns
-
 # Enhanced validation constants
 HONEYPOT_PATTERNS = {
     'spam', 'trap', 'honeypot', 'honey-pot', 'honey_pot', 'spamtrap',
@@ -175,12 +170,14 @@ class FileUploadForm(FlaskForm):
     submit = SubmitField('Verify Emails')
 
 def calculate_ai_scores(email):
-    """Calculate AI-based scores for email quality and engagement potential."""
+    """Calculate AI-based scores for email quality and engagement potential with enhanced analysis."""
     
-    # Initialize base scores
-    reply_score = 7.0  # Base reply score
-    person_score = 7.0  # Base real person score
-    engagement_score = 7.0  # Base engagement score
+    # Initialize base scores - starting slightly higher for legitimate emails
+    scores = {
+        'reply_score': 6.0,    # Starting above neutral
+        'person_score': 6.0,   # Starting above neutral
+        'engagement_score': 6.0 # Starting above neutral
+    }
     
     # Extract email components
     try:
@@ -193,79 +190,150 @@ def calculate_ai_scores(email):
             'valid': False
         }
 
-    # Score adjustments based on domain
-    common_domains = {
-        'gmail.com': 1.0,
-        'yahoo.com': 0.8,
-        'hotmail.com': 0.8,
-        'outlook.com': 0.9,
-        'aol.com': 0.7,
-        'icloud.com': 0.9
+    # Enhanced domain reputation database with more balanced scoring
+    domain_reputation = {
+        # Major Consumer Email Providers - Slightly higher base scores
+        'gmail.com': {'reputation': 0.95, 'type': 'consumer', 'engagement': 0.9},
+        'yahoo.com': {'reputation': 0.9, 'type': 'consumer', 'engagement': 0.85},
+        'hotmail.com': {'reputation': 0.9, 'type': 'consumer', 'engagement': 0.85},
+        'outlook.com': {'reputation': 0.95, 'type': 'mixed', 'engagement': 0.9},
+        'aol.com': {'reputation': 0.85, 'type': 'consumer', 'engagement': 0.8},
+        'icloud.com': {'reputation': 0.95, 'type': 'consumer', 'engagement': 0.9},
+        
+        # Professional/Enterprise Providers - High reputation
+        'microsoft.com': {'reputation': 1.0, 'type': 'enterprise', 'engagement': 1.0},
+        'apple.com': {'reputation': 1.0, 'type': 'enterprise', 'engagement': 1.0},
+        'amazon.com': {'reputation': 1.0, 'type': 'enterprise', 'engagement': 1.0},
+        'google.com': {'reputation': 1.0, 'type': 'enterprise', 'engagement': 1.0},
+        'facebook.com': {'reputation': 1.0, 'type': 'enterprise', 'engagement': 1.0},
+        'linkedin.com': {'reputation': 1.0, 'type': 'enterprise', 'engagement': 1.0},
+        
+        # Educational Institutions - High reputation
+        'edu': {'reputation': 1.0, 'type': 'education', 'engagement': 0.95},
+        'ac.uk': {'reputation': 1.0, 'type': 'education', 'engagement': 0.95},
+        
+        # Government Domains - High reputation
+        'gov': {'reputation': 1.0, 'type': 'government', 'engagement': 0.95},
+        'mil': {'reputation': 1.0, 'type': 'government', 'engagement': 0.95}
     }
-    
-    # Business domain bonus
-    if domain not in common_domains:
-        reply_score += 2.0
-        person_score += 1.5
-        engagement_score += 1.5
+
+    # Professional title and department indicators - Higher base scores
+    professional_indicators = {
+        'director': 2.5, 'manager': 2.2, 'coordinator': 2.0,
+        'analyst': 2.0, 'engineer': 2.2, 'developer': 2.2,
+        'president': 2.5, 'ceo': 2.5, 'cto': 2.5, 'cfo': 2.5,
+        'vp': 2.5, 'head': 2.2, 'lead': 2.2, 'senior': 2.2,
+        'partner': 2.5, 'associate': 2.0, 'consultant': 2.0,
+        'founder': 2.5, 'owner': 2.5, 'principal': 2.2
+    }
+
+    # Department indicators with higher engagement scores
+    department_indicators = {
+        'sales': {'reply': 2.5, 'engagement': 2.5},
+        'marketing': {'reply': 2.2, 'engagement': 2.2},
+        'support': {'reply': 2.0, 'engagement': 2.0},
+        'hr': {'reply': 2.2, 'engagement': 2.2},
+        'recruiting': {'reply': 2.2, 'engagement': 2.2},
+        'finance': {'reply': 2.0, 'engagement': 2.0},
+        'legal': {'reply': 2.0, 'engagement': 2.0},
+        'tech': {'reply': 2.0, 'engagement': 2.0},
+        'it': {'reply': 2.0, 'engagement': 2.0},
+        'business': {'reply': 2.2, 'engagement': 2.2},
+        'operations': {'reply': 2.2, 'engagement': 2.2}
+    }
+
+    # Domain Analysis with more generous scoring for business domains
+    domain_info = domain_reputation.get(domain, {})
+    if domain_info:
+        # Apply domain reputation factors
+        scores['reply_score'] *= domain_info['reputation']
+        scores['person_score'] *= domain_info['reputation']
+        scores['engagement_score'] *= domain_info['engagement']
+        
+        # Boost scores for enterprise and professional domains
+        if domain_info['type'] == 'enterprise':
+            scores['person_score'] += 2.5
+            scores['reply_score'] += 2.0
+            scores['engagement_score'] += 2.0
+        elif domain_info['type'] == 'education':
+            scores['person_score'] += 2.0
+            scores['reply_score'] += 1.5
+            scores['engagement_score'] += 1.5
+        elif domain_info['type'] == 'government':
+            scores['person_score'] += 2.5
+            scores['reply_score'] += 1.5
+            scores['engagement_score'] += 1.5
     else:
-        # Adjust scores based on common domain reputation
-        domain_factor = common_domains.get(domain, 0.5)
-        reply_score *= domain_factor
-        person_score *= domain_factor
-        engagement_score *= domain_factor
+        # More generous scoring for custom business domains
+        tld = domain.split('.')[-1]
+        if tld in ['com', 'org', 'net', 'io']:
+            scores['person_score'] += 2.0
+            scores['reply_score'] += 2.0
+            scores['engagement_score'] += 1.5
 
-    # Analyze local part patterns
-    if '.' in local_part:  # Likely a real name format (e.g., john.doe)
-        person_score += 2.0
-        reply_score += 1.5
-        engagement_score += 1.0
+    # Local Part Analysis
+    words = local_part.replace('.', ' ').replace('-', ' ').replace('_', ' ').split()
     
-    if local_part.isalpha():  # Pure alphabetical
-        person_score += 1.0
-        reply_score += 0.5
+    # Name Pattern Analysis - Higher scores for professional formats
+    if '.' in local_part and len(words) >= 2:  # Likely firstname.lastname
+        scores['person_score'] += 2.5
+        scores['reply_score'] += 1.5
+        scores['engagement_score'] += 1.5
     
-    if any(char.isdigit() for char in local_part):  # Contains numbers
-        person_score -= 0.5
-        reply_score -= 0.5
-    
-    # Length-based adjustments
-    if len(local_part) < 4:  # Very short emails are suspicious
-        person_score -= 1.0
-        reply_score -= 1.0
-    elif len(local_part) > 25:  # Very long emails are unusual
-        person_score -= 0.5
-        reply_score -= 0.5
+    # Professional Title/Role Analysis with higher base scores
+    for word in words:
+        if word in professional_indicators:
+            role_boost = professional_indicators[word]
+            scores['person_score'] += role_boost
+            scores['reply_score'] += role_boost * 0.9
+            scores['engagement_score'] += role_boost * 0.8
 
-    # Check for common patterns
-    if any(pattern in local_part for pattern in ['admin', 'info', 'contact', 'support', 'sales']):
-        person_score -= 1.0
-        reply_score += 1.0
-        engagement_score += 0.5
-    
-    if any(pattern in local_part for pattern in ['noreply', 'no-reply', 'donotreply']):
-        reply_score = 1.0
-        engagement_score = 1.0
-    
+    # Department Analysis with higher engagement potential
+    for word in words:
+        if word in department_indicators:
+            dept_scores = department_indicators[word]
+            scores['reply_score'] += dept_scores['reply']
+            scores['engagement_score'] += dept_scores['engagement']
+
+    # Quality Indicators - Less severe penalties
+    if len(local_part) < 4:  # Very short emails
+        scores['person_score'] -= 0.5
+        scores['reply_score'] -= 0.5
+    elif len(local_part) > 30:  # Very long emails
+        scores['person_score'] -= 0.3
+        scores['reply_score'] -= 0.3
+
+    # Negative Patterns - Maintain strict filtering for automated emails
+    negative_patterns = ['noreply', 'no-reply', 'donotreply', 'bounce', 'mailer', 'automate']
+    if any(pattern in local_part for pattern in negative_patterns):
+        scores['reply_score'] = 1.0
+        scores['engagement_score'] = 1.0
+        scores['person_score'] = 1.0
+
+    # Generic/Role Patterns - Less severe penalties
+    generic_patterns = ['info', 'contact', 'admin', 'support', 'help', 'service']
+    if any(pattern in local_part for pattern in generic_patterns):
+        scores['person_score'] *= 0.8
+        scores['reply_score'] *= 1.3  # Actually more likely to reply
+        scores['engagement_score'] *= 1.2
+
     # Normalize scores between 1 and 10
     def normalize_score(score):
         return max(1.0, min(10.0, score))
 
-    scores = {
-        'reply_score': normalize_score(reply_score),
-        'person_score': normalize_score(person_score),
-        'engagement_score': normalize_score(engagement_score),
+    return {
+        'reply_score': normalize_score(scores['reply_score']),
+        'person_score': normalize_score(scores['person_score']),
+        'engagement_score': normalize_score(scores['engagement_score']),
         'valid': True
     }
-    
-    return scores
 
 def generate_excel_report(verification_id):
     verification = Verification.query.get(verification_id)
     if not verification:
         return None
 
-    results = json.loads(verification.results) if verification.results else []
+    results = json.loads(verification.results) if verification.results else {}
     
     # Create output buffer
     output = io.BytesIO()
@@ -392,7 +460,7 @@ def generate_excel_report(verification_id):
     medium_scores = 0
     low_scores = 0
     
-    for result in results:
+    for email, result in results.items():
         # Only show valid emails
         if not result.get('valid', False):
             continue
@@ -425,12 +493,12 @@ def generate_excel_report(verification_id):
             rating_format = low_rating_format
             
         # Determine industry type and business email
-        domain = result['email'].split('@')[1]
+        domain = email.split('@')[1]
         is_business = not any(personal in domain for personal in ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com'])
         industry = 'Business' if is_business else 'Personal'
         
         # Determine email pattern
-        email_local = result['email'].split('@')[0]
+        email_local = email.split('@')[0]
         if '.' in email_local or '-' in email_local:
             pattern = 'Name Format'
         else:
@@ -440,7 +508,7 @@ def generate_excel_report(verification_id):
         domain_rep = min(max(avg_score + random.uniform(-1, 1), 1), 10)
         
         # Write data with appropriate formats
-        worksheet.write(row, 0, result['email'], cell_format)
+        worksheet.write(row, 0, email, cell_format)
         
         # Write scores with color formatting
         def get_score_format(score):
@@ -631,23 +699,33 @@ def read_emails_from_file(filepath):
             # Try reading with and without headers
             try:
                 df = pd.read_csv(filepath)
+                logger.info(f"Successfully read CSV file with {len(df)} rows")
             except pd.errors.EmptyDataError:
                 raise Exception("The file is empty")
             except:
                 df = pd.read_csv(filepath, header=None)
+                logger.info(f"Read CSV file without headers, found {len(df)} rows")
             
             if df.empty:
                 raise Exception("The file is empty")
                 
-            # Try to find column with email addresses
-            email_pattern = r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}'
-            for col in df.columns:
+            # First try columns with 'email' in the name
+            email_columns = [col for col in df.columns if 'email' in str(col).lower()]
+            
+            # If no email columns found, try all columns
+            if not email_columns:
+                email_columns = df.columns
+                
+            # Process each column
+            for col in email_columns:
                 col_data = df[col].astype(str)
-                # Check if column name contains 'email' or has email pattern
-                if 'email' in str(col).lower() or col_data.str.contains(email_pattern, regex=True).any():
-                    valid_emails = col_data[col_data.str.contains(email_pattern, regex=True)].tolist()
-                    emails.extend(valid_emails)
-                    
+                # Include all non-empty cells as potential emails
+                potential_emails = [email.strip() for email in col_data if email.strip()]
+                if potential_emails:
+                    logger.info(f"Found {len(potential_emails)} potential emails in column '{col}'")
+                    emails.extend(potential_emails)
+                    break  # Stop after finding first column with potential emails
+        
         elif ext.lower() in ['.xlsx', '.xls']:
             try:
                 df = pd.read_excel(filepath)
@@ -659,35 +737,37 @@ def read_emails_from_file(filepath):
             if df.empty:
                 raise Exception("The file is empty")
                 
-            # Try to find column with email addresses
-            email_pattern = r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}'
-            for col in df.columns:
+            # Process Excel similarly to CSV
+            email_columns = [col for col in df.columns if 'email' in str(col).lower()]
+            if not email_columns:
+                email_columns = df.columns
+                
+            for col in email_columns:
                 col_data = df[col].astype(str)
-                # Check if column name contains 'email' or has email pattern
-                if 'email' in str(col).lower() or col_data.str.contains(email_pattern, regex=True).any():
-                    valid_emails = col_data[col_data.str.contains(email_pattern, regex=True)].tolist()
-                    emails.extend(valid_emails)
+                potential_emails = [email.strip() for email in col_data if email.strip()]
+                if potential_emails:
+                    logger.info(f"Found {len(potential_emails)} potential emails in column '{col}'")
+                    emails.extend(potential_emails)
+                    break
                     
         elif ext.lower() == '.txt':
             with open(filepath, 'r') as f:
-                content = f.read().strip()
-                if not content:
-                    raise Exception("The file is empty")
-                    
-                # Find all email patterns in the text
-                email_pattern = r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}'
-                emails = re.findall(email_pattern, content)
+                content = f.read().splitlines()
+                # Include all non-empty lines as potential emails
+                emails = [line.strip() for line in content if line.strip()]
                         
-        # Remove duplicates and clean emails
-        emails = list(set(emails))
-        emails = [email.strip() for email in emails if '@' in email and not email.startswith('@') and not email.endswith('@')]
+        # Remove duplicates while preserving order
+        logger.info(f"Before deduplication: {len(emails)} emails")
+        seen = set()
+        emails = [x for x in emails if not (x in seen or seen.add(x))]
+        logger.info(f"After deduplication: {len(emails)} emails")
         
     except Exception as e:
         logger.error(f"Error reading file {filepath}: {str(e)}")
         raise Exception(f"Error reading file: {str(e)}")
         
     if not emails:
-        raise Exception("No valid email addresses found in file. Please ensure your file contains a column with email addresses.")
+        raise Exception("No potential email addresses found in file. Please ensure your file contains a column with email addresses.")
         
     return emails
 
@@ -718,11 +798,12 @@ def process_file(filepath, user_id):
         total_reply_score = 0
         total_person_score = 0
         total_engagement_score = 0
-        results = []
+        results = {}
 
         for email in emails:
-            result = verify_email(email.strip())
-            results.append(result)
+            email = email.strip()
+            result = verify_email(email)
+            results[email] = result
             
             if result['valid']:
                 valid_count += 1
