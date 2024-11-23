@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+    <style>
+        .envelope {
+            fill: #4a90e2;
+            animation: float 3s ease-in-out infinite;
+        }
+        .check {
+            fill: #2ecc71;
+            transform-origin: center;
+            animation: scale 2s ease-in-out infinite;
+        }
+        .gear {
+            fill: #34495e;
+            transform-origin: center;
+            animation: rotate 10s linear infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+        @keyframes scale {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+    <g class="envelope">
+        <path d="M400,150H100c-11,0-20,9-20,20v160c0,11,9,20,20,20h300c11,0,20-9,20-20V170C420,159,411,150,400,150z M380,190v120H120V190 H380z"/>
+        <path d="M250,280L120,190v-20l130,90l130-90v20L250,280z"/>
+    </g>
+    <g class="check" transform="translate(200, 200)">
+        <path d="M35.5,19.9l-2.1-2.1c-0.3-0.3-0.8-0.3-1.1,0L15.9,34.2l-7.2-7.2c-0.3-0.3-0.8-0.3-1.1,0l-2.1,2.1 c-0.3,0.3-0.3,0.8,0,1.1l9.8,9.8c0.3,0.3,0.8,0.3,1.1,0l18.1-18.1C35.8,20.7,35.8,20.2,35.5,19.9z"/>
+    </g>
+    <g class="gear" transform="translate(300, 300)">
+        <path d="M80,40c0-22.1-17.9-40-40-40S0,17.9,0,40s17.9,40,40,40S80,62.1,80,40z M40,60c-11,0-20-9-20-20s9-20,20-20s20,9,20,20 S51,60,40,60z"/>
+        <path d="M40,0c-2.2,0-4,1.8-4,4v4c0,2.2,1.8,4,4,4s4-1.8,4-4V4C44,1.8,42.2,0,40,0z"/>
+        <path d="M40,68c-2.2,0-4,1.8-4,4v4c0,2.2,1.8,4,4,4s4-1.8,4-4v-4C44,69.8,42.2,68,40,68z"/>
+        <path d="M72,36h-4c-2.2,0-4,1.8-4,4s1.8,4,4,4h4c2.2,0,4-1.8,4-4S74.2,36,72,36z"/>
+        <path d="M16,36h-4c-2.2,0-4,1.8-4,4s1.8,4,4,4h4c2.2,0,4-1.8,4-4S18.2,36,16,36z"/>
+    </g>
+</svg>

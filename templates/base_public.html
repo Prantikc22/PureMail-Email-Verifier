@@ -3,140 +3,281 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{% endblock %}</title>
+    <title>PureMail - AI-Powered Email Verification Platform</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+    
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <!-- Meta tags for SEO -->
+    <meta name="description" content="PureMail - AI-powered email verification platform that ensures 99.9% accuracy in validating email addresses. Protect your sender reputation and maximize deliverability.">
+    <meta name="keywords" content="email verification, email validation, AI email verification, email list cleaning">
+    
+    <!-- Open Graph / Social Media Meta Tags -->
+    <meta property="og:title" content="PureMail - AI-Powered Email Verification">
+    <meta property="og:description" content="Ensure your emails reach real people with 99.9% accuracy using our AI-powered email verification platform.">
+    <meta property="og:image" content="{{ url_for('static', filename='images/og-image.png', _external=True) }}">
+    <meta property="og:url" content="{{ request.url }}">
+    
+    <!-- Custom Styles -->
     <style>
-        .navbar-brand {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
+        :root {
+            --primary-color: #4a1f82;
+            --dark-color: #0f0914;
+            --light-color: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
         }
         
-        .navbar-brand img {
-            height: 40px;
-            width: auto;
+        .navbar {
+            padding: 1rem 0;
+            transition: all 0.3s ease;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .navbar-brand {
+            color: white;
+            font-weight: bold;
         }
 
-        .bg-gradient-primary {
-            background: linear-gradient(45deg, #2937f0, #9f1ae2);
+        .navbar .nav-link {
+            color: white;
+            font-weight: 500;
+            padding: 0.5rem 1rem !important;
+            transition: all 0.3s ease;
+        }
+        
+        .navbar.scrolled {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
 
-        .btn-primary {
-            background-color: #2937f0;
-            border-color: #2937f0;
+        .navbar.scrolled .navbar-brand,
+        .navbar.scrolled .nav-link {
+            color: var(--dark-color);
         }
 
-        .btn-primary:hover {
-            background-color: #1f2bc7;
-            border-color: #1f2bc7;
+        .navbar.scrolled .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .hero-section {
+            background: linear-gradient(135deg, var(--primary-color), var(--dark-color));
+            padding: 8rem 0 6rem;
+            position: relative;
+            overflow: hidden;
         }
 
-        .feature-icon {
-            width: 64px;
-            height: 64px;
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            background: url('{{ url_for('static', filename='images/email-pattern.svg') }}') repeat;
+            opacity: 0.1;
+            animation: moveBackground 20s linear infinite;
+        }
+
+        @keyframes moveBackground {
+            0% {
+                background-position: 0 0;
+            }
+            100% {
+                background-position: 100% 100%;
+            }
+        }
+
+        .hero-image {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+
+        .trusted-by {
+            background-color: var(--light-color);
+            padding: 4rem 0;
+            position: relative;
+        }
+
+        .company-logos {
             display: flex;
-            align-items: center;
             justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 3rem;
+            margin-top: 2rem;
         }
 
-        .footer {
-            background-color: #1a1a1a;
+        .company-logo {
+            filter: grayscale(100%);
+            opacity: 0.6;
+            transition: all 0.3s ease;
+            max-width: 120px;
         }
 
-        .footer a {
-            text-decoration: none;
-            transition: opacity 0.2s;
+        .company-logo:hover {
+            filter: grayscale(0);
+            opacity: 1;
+            transform: scale(1.05);
         }
 
-        .footer a:hover {
-            opacity: 0.8;
+        .pricing-card {
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 15px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .pricing-card.popular::before {
+            content: 'Most Popular';
+            position: absolute;
+            top: 1.5rem;
+            right: -4rem;
+            background: var(--primary-color);
+            color: white;
+            padding: 0.5rem 4rem;
+            transform: rotate(45deg);
+            font-size: 0.8rem;
         }
     </style>
-    {% block extra_css %}{% endblock %}
 </head>
 <body>
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+    <nav class="navbar navbar-expand-lg fixed-top">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('index') }}">
-                <img src="{{ url_for('static', filename='images/puremail-logo.png') }}" alt="PureMail">
+            <a class="navbar-brand" href="/">
+                <span class="fw-bold">PureMail</span>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
+                <i class="fas fa-bars" style="color: white;"></i>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    {% if current_user.is_authenticated %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
-                        </li>
-                    {% else %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('login') }}">Login</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="btn btn-primary ms-2" href="{{ url_for('signup') }}">Sign Up</a>
-                        </li>
-                    {% endif %}
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#features">Features</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#pricing">Pricing</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#trusted-by">Customers</a>
+                    </li>
+                    <li class="nav-item ms-lg-3">
+                        <a class="btn btn-light" href="/signup">Get Started</a>
+                    </li>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <!-- Flash Messages -->
-    <div class="container mt-4">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-    </div>
-
     <!-- Main Content -->
     {% block content %}{% endblock %}
 
     <!-- Footer -->
-    <footer class="footer text-white py-5 mt-5">
+    <footer class="footer">
         <div class="container">
             <div class="row">
-                <div class="col-md-4">
-                    <h5>About PureMail</h5>
-                    <p class="text-muted">Professional email verification service to improve your email deliverability.</p>
+                <div class="col-lg-4 mb-4 mb-lg-0">
+                    <h3 class="text-white fw-bold mb-4">PureMail</h3>
+                    <p class="mb-4">AI-powered email verification platform that ensures your emails reach real people with unprecedented accuracy.</p>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-linkedin"></i></a>
+                        <a href="#"><i class="fab fa-github"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                    </div>
                 </div>
-                <div class="col-md-4">
-                    <h5>Quick Links</h5>
-                    <ul class="list-unstyled">
-                        <li><a href="#" class="text-muted">Features</a></li>
-                        <li><a href="#" class="text-muted">Pricing</a></li>
-                        <li><a href="#" class="text-muted">Documentation</a></li>
-                    </ul>
+                <div class="col-6 col-lg-2 mb-4 mb-lg-0">
+                    <h5>Product</h5>
+                    <a href="#features" class="footer-link">Features</a>
+                    <a href="#pricing" class="footer-link">Pricing</a>
+                    <a href="/docs" class="footer-link">Documentation</a>
+                    <a href="/blog" class="footer-link">Blog</a>
                 </div>
-                <div class="col-md-4">
-                    <h5>Contact</h5>
-                    <ul class="list-unstyled text-muted">
-                        <li>Email: support@puremail.com</li>
-                    </ul>
+                <div class="col-6 col-lg-2 mb-4 mb-lg-0">
+                    <h5>Company</h5>
+                    <a href="/about" class="footer-link">About Us</a>
+                    <a href="/careers" class="footer-link">Careers</a>
+                    <a href="/press" class="footer-link">Press Kit</a>
+                    <a href="/contact" class="footer-link">Contact</a>
+                </div>
+                <div class="col-6 col-lg-2 mb-4 mb-lg-0">
+                    <h5>Resources</h5>
+                    <a href="/help" class="footer-link">Help Center</a>
+                    <a href="/status" class="footer-link">Status</a>
+                    <a href="/terms" class="footer-link">Terms of Service</a>
+                    <a href="/privacy" class="footer-link">Privacy Policy</a>
+                </div>
+                <div class="col-6 col-lg-2">
+                    <h5>Developers</h5>
+                    <a href="/api" class="footer-link">API Reference</a>
+                    <a href="/sdk" class="footer-link">SDK & Tools</a>
+                    <a href="/changelog" class="footer-link">Changelog</a>
+                    <a href="/community" class="footer-link">Community</a>
                 </div>
             </div>
-            <hr class="mt-4 mb-3 border-secondary">
+            <hr class="mt-5 mb-4" style="border-color: rgba(255, 255, 255, 0.1);">
             <div class="row align-items-center">
                 <div class="col-md-6 text-center text-md-start">
-                    <p class="mb-0 text-muted">&copy; 2024 PureMail. All rights reserved.</p>
+                    <p class="mb-0" style="color: rgba(255, 255, 255, 0.6);"> 2024 PureMail. All rights reserved.</p>
+                </div>
+                <div class="col-md-6 text-center text-md-end mt-3 mt-md-0">
+                    <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons@develop/icons/visa.svg" alt="Visa" class="payment-icon">
+                    <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons@develop/icons/mastercard.svg" alt="Mastercard" class="payment-icon">
+                    <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons@develop/icons/americanexpress.svg" alt="American Express" class="payment-icon">
+                    <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons@develop/icons/paypal.svg" alt="PayPal" class="payment-icon">
                 </div>
             </div>
         </div>
     </footer>
 
+    <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    {% block extra_js %}{% endblock %}
+    
+    <!-- Navbar Scroll Effect -->
+    <script>
+        window.addEventListener('scroll', function() {
+            const navbar = document.querySelector('.navbar');
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+    </script>
 </body>
 </html>

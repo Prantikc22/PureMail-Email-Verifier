@@ -869,8 +869,8 @@ def process_file(filepath, user_id):
 @app.route('/')
 def index():
     if current_user.is_authenticated:
-        return redirect(url_for('verify'))
-    return render_template('index.html')
+        return redirect(url_for('dashboard'))
+    return render_template('landing.html')
 
 @app.route('/dashboard')
 @login_required
@@ -1189,6 +1189,10 @@ def reset_password(token):
         return redirect(url_for('login'))
         
     return render_template('reset_password.html')
+
+@app.route('/contact')
+def contact():
+    return render_template('contact.html')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=3001, debug=True)

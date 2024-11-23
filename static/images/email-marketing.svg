@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="600" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Email Icon -->
+  <rect x="200" y="150" width="400" height="300" rx="20" fill="#4a1f82" opacity="0.9"/>
+  <path d="M200 200l200 150 200-150" stroke="white" stroke-width="4" fill="none"/>
+  
+  <!-- Marketing Elements -->
+  <circle cx="400" cy="300" r="80" fill="none" stroke="white" stroke-width="4" opacity="0.6">
+    <animate attributeName="r" values="80;90;80" dur="3s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Floating Elements -->
+  <g>
+    <circle cx="250" cy="200" r="10" fill="white" opacity="0.8">
+      <animate attributeName="cy" values="200;180;200" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="550" cy="400" r="8" fill="white" opacity="0.8">
+      <animate attributeName="cy" values="400;420;400" dur="2.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="450" cy="150" r="6" fill="white" opacity="0.8">
+      <animate attributeName="cy" values="150;130;150" dur="1.8s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+  
+  <!-- Check Marks -->
+  <path d="M300 450l30 30 60-60" stroke="white" stroke-width="4" fill="none" opacity="0.9">
+    <animate attributeName="stroke-dasharray" values="0,200;200,0" dur="2s" fill="freeze"/>
+  </path>
+</svg>
