@@ -1,6 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
 
@@ -13,6 +14,13 @@ class User(UserMixin, db.Model):
     verifications = db.relationship('Verification', backref='user', lazy=True)
     dmarc_records = db.relationship('DMARCRecord', backref='user', lazy=True)
     blacklist_monitors = db.relationship('BlacklistMonitor', backref='user', lazy=True)
+    appsumo_codes = db.relationship('AppSumoCode', backref='user', lazy=True)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
 
 class Verification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -84,6 +92,14 @@ class CatchAllScore(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     verification_id = db.Column(db.Integer, db.ForeignKey('verification.id'), nullable=False)
     email = db.Column(db.String(255), nullable=False)
-    score = db.Column(db.Integer)  # 1-10
+    score = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    factors = db.Column(db.Text)  # JSON string of scoring factors
+    factors = db.Column(db.Text)
+
+class AppSumoCode(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(255), unique=True, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    redeemed_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(20), default='active')  # active, redeemed, expired

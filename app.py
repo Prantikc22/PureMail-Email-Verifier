@@ -3,27 +3,33 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.urls import url_parse
+from flask_migrate import Migrate
 from werkzeug.utils import secure_filename
 import os
-import pandas as pd
-import json
 import logging
-import shutil
-from email_validator import validate_email, EmailNotValidError
+import pandas as pd
+import re
 import dns.resolver
-from dns.exception import DNSException as DNSError
-import click
-from flask_migrate import Migrate
+import smtplib
+import socket
+import json
+import secrets
+import string
+from email_validator import validate_email, EmailNotValidError
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.utils import get_column_letter
 import xlsxwriter
 import uuid
-import secrets
-import traceback
-import re
 import io
 import random
 from flask_wtf import FlaskForm
 from wtforms import FileField, SubmitField
 from wtforms.validators import DataRequired
+import click
+import traceback
+import shutil
 
 # Initialize app and database
 app = Flask(__name__)
@@ -37,7 +43,9 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=60)
 # Create upload folder if it doesn't exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-db = SQLAlchemy(app)
+# Initialize database
+from models import db, User, Verification, DMARCRecord, BlacklistMonitor, BlacklistEntry, CatchAllScore, AppSumoCode
+db.init_app(app)
 migrate = Migrate(app, db)
 
 # Initialize login manager
@@ -63,46 +71,6 @@ logger = logging.getLogger(__name__)
 
 # Create required directories
 os.makedirs('logs', exist_ok=True)
-
-# Models
-class User(UserMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128))
-    reset_token = db.Column(db.String(100), unique=True)
-    reset_token_expiry = db.Column(db.DateTime)
-    verifications = db.relationship('Verification', backref='user', lazy=True)
-
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
-
-    def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
-
-    def get_reset_token(self, expires_in=3600):
-        self.reset_token = secrets.token_urlsafe(32)
-        self.reset_token_expiry = datetime.utcnow() + timedelta(seconds=expires_in)
-        db.session.commit()
-        return self.reset_token
-
-class Verification(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    filename = db.Column(db.String(255), nullable=False)
-    date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    total_emails = db.Column(db.Integer, default=0)
-    valid_emails = db.Column(db.Integer, default=0)
-    invalid_format = db.Column(db.Integer, default=0)
-    disposable = db.Column(db.Integer, default=0)
-    dns_error = db.Column(db.Integer, default=0)
-    role_based = db.Column(db.Integer, default=0)
-    status = db.Column(db.String(20), default='Pending')
-    results = db.Column(db.Text)
-    avg_score = db.Column(db.Float, default=0.0)
-    reply_score = db.Column(db.Float, default=7.0)
-    person_score = db.Column(db.Float, default=7.0)
-    engagement_score = db.Column(db.Float, default=7.0)
 
 # Enhanced validation constants
 HONEYPOT_PATTERNS = {
@@ -866,6 +834,25 @@ def process_file(filepath, user_id):
             pass
         raise
 
+# Initialize database tables and create test user
+def init_db():
+    with app.app_context():
+        # Create all tables
+        db.create_all()
+        
+        # Check if test user exists
+        test_user = User.query.filter_by(username='test').first()
+        if not test_user:
+            # Create test user
+            test_user = User(
+                username='test',
+                email='test@example.com'
+            )
+            test_user.set_password('test123')
+            db.session.add(test_user)
+            db.session.commit()
+            logger.info('Created test user')
+
 @app.route('/')
 def index():
     if current_user.is_authenticated:
@@ -1040,61 +1027,52 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        remember = request.form.get('remember', False) == 'on'
+        remember = True if request.form.get('remember') else False
         
-        user = User.query.filter_by(username=username).first()
+        user = User.query.filter((User.username == username) | (User.email == username)).first()
         
-        if user and user.check_password(password):
+        if user and check_password_hash(user.password_hash, password):
             login_user(user, remember=remember)
             next_page = request.args.get('next')
-            flash('Login successful!', 'success')
-            return redirect(next_page if next_page else url_for('dashboard'))
-        else:
-            flash('Invalid username or password', 'error')
-    
+            if not next_page or url_parse(next_page).netloc != '':
+                next_page = url_for('dashboard')
+            return redirect(next_page)
+        
+        flash('Please check your login details and try again.', 'error')
     return render_template('login.html')
 
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
-    flash('You have been successfully logged out.', 'success')
-    return redirect(url_for('login'))
+    return redirect(url_for('index'))
 
-@app.route('/download/<int:verification_id>')
+@app.route('/download_report/<int:verification_id>')
 @login_required
 def download_report(verification_id):
     verification = Verification.query.get_or_404(verification_id)
     
-    # Check if user owns this verification
+    # Check if the verification belongs to the current user
     if verification.user_id != current_user.id:
-        abort(403)
+        abort(403)  # Forbidden
     
-    # Create the Excel file
-    report_filename = f'verification_report_{verification_id}.xlsx'
-    report_path = os.path.join(app.config['UPLOAD_FOLDER'], report_filename)
+    # Generate the report
+    report_path = generate_excel_report(verification_id)
+    
+    if not report_path:
+        flash('Error generating report', 'error')
+        return redirect(url_for('history'))
     
     try:
-        report_data = generate_excel_report(verification_id)
-        with open(report_path, 'wb') as f:
-            f.write(report_data.read())
         return send_file(
             report_path,
             as_attachment=True,
-            download_name=report_filename,
-            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            download_name=f'email_verification_report_{verification_id}.xlsx'
         )
     except Exception as e:
-        logger.error(f"Error generating report: {str(e)}")
-        flash('Error generating report', 'error')
-        return redirect(url_for('verify'))
-    finally:
-        # Clean up the file
-        try:
-            if os.path.exists(report_path):
-                os.remove(report_path)
-        except Exception as e:
-            logger.error(f"Error removing report file: {str(e)}")
+        logger.error(f"Error sending file: {e}")
+        flash('Error downloading report', 'error')
+        return redirect(url_for('history'))
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -1136,63 +1114,121 @@ def register():
     
     return render_template('register.html')
 
-@app.route('/reset_password_request', methods=['GET', 'POST'])
-def reset_password_request():
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
-        
-    if request.method == 'POST':
-        email = request.form.get('email')
-        user = User.query.filter_by(email=email).first()
-        
-        if user:
-            token = user.get_reset_token()
-            # In a real application, you would send this token via email
-            # For now, we'll just show it in a flash message
-            flash(f'Password reset link: {url_for("reset_password", token=token, _external=True)}', 'info')
-            return redirect(url_for('login'))
-            
-        flash('Email address not found', 'error')
-        return redirect(url_for('reset_password_request'))
-        
-    return render_template('reset_password_request.html')
-
-@app.route('/reset_password/<token>', methods=['GET', 'POST'])
-def reset_password(token):
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
-        
-    user = User.query.filter_by(reset_token=token).first()
-    
-    if user is None or user.reset_token_expiry < datetime.utcnow():
-        flash('Invalid or expired reset token', 'error')
-        return redirect(url_for('reset_password_request'))
-        
-    if request.method == 'POST':
-        password = request.form.get('password')
-        confirm_password = request.form.get('confirm_password')
-        
-        if not password or not confirm_password:
-            flash('Please fill in all fields', 'error')
-            return redirect(url_for('reset_password', token=token))
-            
-        if password != confirm_password:
-            flash('Passwords do not match', 'error')
-            return redirect(url_for('reset_password', token=token))
-            
-        user.set_password(password)
-        user.reset_token = None
-        user.reset_token_expiry = None
-        db.session.commit()
-        
-        flash('Your password has been reset', 'success')
-        return redirect(url_for('login'))
-        
-    return render_template('reset_password.html')
-
 @app.route('/contact')
 def contact():
     return render_template('contact.html')
 
+@app.route('/appsumo')
+def appsumo_landing():
+    return render_template('appsumo.html')
+
+@app.route('/appsumo/register', methods=['GET', 'POST'])
+def appsumo_register():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        appsumo_code = request.form.get('appsumo_code')
+
+        # Input validation
+        if not all([username, email, password, appsumo_code]):
+            flash('All fields are required', 'error')
+            return redirect(url_for('appsumo_landing'))
+
+        # Check if user already exists
+        if User.query.filter_by(username=username).first():
+            flash('Username already exists', 'error')
+            return redirect(url_for('appsumo_landing'))
+        if User.query.filter_by(email=email).first():
+            flash('Email already registered', 'error')
+            return redirect(url_for('appsumo_landing'))
+
+        # Verify AppSumo code
+        code = AppSumoCode.query.filter_by(code=appsumo_code, status='active').first()
+        if not code:
+            flash('Invalid or already used AppSumo code', 'error')
+            return redirect(url_for('appsumo_landing'))
+
+        try:
+            # Start database transaction
+            db.session.begin_nested()
+
+            # Create new user
+            user = User(username=username, email=email)
+            user.set_password(password)
+            db.session.add(user)
+            db.session.flush()  # This assigns the user.id
+
+            # Mark code as redeemed
+            code.user_id = user.id
+            code.status = 'redeemed'
+            code.redeemed_at = datetime.utcnow()
+
+            # Commit the transaction
+            db.session.commit()
+
+            # Log the user in
+            login_user(user)
+            flash('Successfully registered with AppSumo code! Welcome to PureMail!', 'success')
+            return redirect(url_for('dashboard'))
+
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error during AppSumo registration: {str(e)}")
+            flash('An error occurred during registration. Please try again.', 'error')
+            return redirect(url_for('appsumo_landing'))
+
+    return redirect(url_for('appsumo_landing'))
+
+@app.route('/redeem-code', methods=['POST'])
+@login_required
+def redeem_code():
+    code = request.form.get('code')
+    if not code:
+        flash('Please enter a valid AppSumo code.', 'error')
+        return redirect(url_for('appsumo_landing'))
+    
+    # Check if code exists and is not redeemed
+    appsumo_code = AppSumoCode.query.filter_by(code=code, status='active').first()
+    if not appsumo_code:
+        flash('Invalid or already redeemed code.', 'error')
+        return redirect(url_for('appsumo_landing'))
+    
+    # Redeem the code
+    appsumo_code.user_id = current_user.id
+    appsumo_code.status = 'redeemed'
+    appsumo_code.redeemed_at = datetime.utcnow()
+    db.session.commit()
+    
+    flash('Successfully redeemed AppSumo code! Welcome to PureMail Lifetime Access!', 'success')
+    return redirect(url_for('dashboard'))
+
+@app.cli.command('generate-appsumo-codes')
+@click.argument('count', type=int)
+def generate_appsumo_codes(count):
+    """Generate AppSumo codes."""
+    import secrets
+    import string
+
+    def generate_code():
+        # Generate a random code in format: APPSUMO-XXXX-XXXX-XXXX
+        chars = string.ascii_uppercase + string.digits
+        code_parts = [''.join(secrets.choice(chars) for _ in range(4)) for _ in range(3)]
+        return f"APPSUMO-{''.join(code_parts)}"
+
+    codes_created = 0
+    for _ in range(count):
+        code = generate_code()
+        while AppSumoCode.query.filter_by(code=code).first():
+            code = generate_code()
+        
+        appsumo_code = AppSumoCode(code=code)
+        db.session.add(appsumo_code)
+        codes_created += 1
+
+    db.session.commit()
+    print(f"Successfully generated {codes_created} AppSumo codes")
+
 if __name__ == '__main__':
+    init_db()
     app.run(host='0.0.0.0', port=3001, debug=True)

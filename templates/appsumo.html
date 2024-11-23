@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="text-center mb-5">
+                <span class="badge bg-warning text-dark px-4 py-2 mb-3">APPSUMO EXCLUSIVE</span>
+                <h1 class="display-4 mb-3">Welcome, AppSumo Hero! 🎉</h1>
+                <p class="lead text-muted">You're just one step away from unlimited email verification power.</p>
+            </div>
+
+            <div class="card shadow-lg border-0">
+                <div class="card-body p-5">
+                    <div class="row">
+                        <div class="col-lg-6 border-end">
+                            <h4 class="mb-4">What You're Getting:</h4>
+                            <ul class="list-unstyled">
+                                <li class="mb-3">
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    <strong>Lifetime Access</strong>
+                                </li>
+                                <li class="mb-3">
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    <strong>Unlimited Verifications</strong>
+                                </li>
+                                <li class="mb-3">
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    <strong>AI-Powered Scoring</strong>
+                                </li>
+                                <li class="mb-3">
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    <strong>DMARC Monitoring</strong>
+                                </li>
+                                <li class="mb-3">
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    <strong>Premium Support</strong>
+                                </li>
+                            </ul>
+                            <div class="alert alert-warning">
+                                <div class="d-flex">
+                                    <div class="me-3">
+                                        <i class="fas fa-tag fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="alert-heading">Special Price</h5>
+                                        <p class="mb-0">
+                                            <span class="text-decoration-line-through">$199/month</span><br>
+                                            <strong class="h3">$89</strong> <small>one-time payment</small>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-6">
+                            <h4 class="mb-4">Activate Your Account</h4>
+                            <form method="POST" action="{{ url_for('appsumo_register') }}">
+                                {% with messages = get_flashed_messages(with_categories=true) %}
+                                    {% if messages %}
+                                        {% for category, message in messages %}
+                                            <div class="alert alert-{{ category }}">{{ message }}</div>
+                                        {% endfor %}
+                                    {% endif %}
+                                {% endwith %}
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">AppSumo Code</label>
+                                    <input type="text" name="appsumo_code" class="form-control form-control-lg" required placeholder="Enter your code">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Username</label>
+                                    <input type="text" name="username" class="form-control" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Email Address</label>
+                                    <input type="email" name="email" class="form-control" required>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="form-label">Password</label>
+                                    <input type="password" name="password" class="form-control" required>
+                                </div>
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-warning btn-lg">
+                                        <i class="fas fa-rocket me-2"></i>Activate Lifetime Access
+                                    </button>
+                                </div>
+                                <p class="text-center small text-muted mt-3">
+                                    <i class="fas fa-lock me-1"></i>
+                                    Your purchase is protected by AppSumo's 30-day guarantee
+                                </p>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
