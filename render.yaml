@@ -2,10 +2,20 @@ services:
   - type: web
     name: puremail
     env: python
-    buildCommand: |
-      pip install -r requirements.txt
-    startCommand: |
-      python init_db.py
+    buildCommand: pip install -r requirements.txt
+    startCommand: >
+      python -c "
+      from app import db, app;
+      from models import User;
+      from werkzeug.security import generate_password_hash;
+      with app.app_context():
+          db.create_all();
+          if not User.query.filter_by(email='admin@puremail.com').first():
+              admin = User(username='admin@puremail.com', email='admin@puremail.com', is_admin=True, credits=1000);
+              admin.password_hash = generate_password_hash('admin123');
+              db.session.add(admin);
+              db.session.commit()
+      " &&
       gunicorn app:app
     envVars:
       - key: PYTHON_VERSION
@@ -14,6 +24,10 @@ services:
         fromDatabase:
           name: puremail-db
           property: connectionString
+      - key: FLASK_APP
+        value: app.py
+      - key: FLASK_ENV
+        value: production
       - key: UPLOAD_FOLDER
         value: /opt/render/project/src/uploads
       - key: MAX_CONTENT_LENGTH

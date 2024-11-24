@@ -1,21 +1,19 @@
+from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
-from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
 
 class User(UserMixin, db.Model):
-    __tablename__ = 'users'  # Explicitly set table name
+    __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    verifications = db.relationship('Verification', backref='user', lazy=True)
-    dmarc_records = db.relationship('DMARCRecord', backref='user', lazy=True)
-    blacklist_monitors = db.relationship('BlacklistMonitor', backref='user', lazy=True)
-    appsumo_codes = db.relationship('AppSumoCode', backref='user', lazy=True)
+    is_admin = db.Column(db.Boolean, default=False)
+    credits = db.Column(db.Integer, default=0)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -24,7 +22,7 @@ class User(UserMixin, db.Model):
         return check_password_hash(self.password_hash, password)
 
 class Verification(db.Model):
-    __tablename__ = 'verifications'  # Explicitly set table name
+    __tablename__ = 'verifications'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     filename = db.Column(db.String(255), nullable=False)
@@ -33,12 +31,8 @@ class Verification(db.Model):
     valid_emails = db.Column(db.Integer, default=0)
     invalid_format = db.Column(db.Integer, default=0)
     disposable = db.Column(db.Integer, default=0)
-    role_based = db.Column(db.Integer, default=0)
     dns_error = db.Column(db.Integer, default=0)
-    status = db.Column(db.String(20), default='Pending')
-    results = db.Column(db.Text)  # JSON string of detailed results
-    
-    # AI Scoring fields
+    role_based = db.Column(db.Integer, default=0)
     avg_score = db.Column(db.Float, default=0.0)
     reply_score = db.Column(db.Float, default=0.0)
     person_score = db.Column(db.Float, default=0.0)
@@ -48,7 +42,7 @@ class Verification(db.Model):
     catch_all_scores = db.relationship('CatchAllScore', backref='verification', lazy=True)
 
 class DMARCRecord(db.Model):
-    __tablename__ = 'dmarc_records'  # Explicitly set table name
+    __tablename__ = 'dmarc_records'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     domain = db.Column(db.String(255), nullable=False)
@@ -61,7 +55,7 @@ class DMARCRecord(db.Model):
     reports = db.relationship('DMARCReport', backref='dmarc_record', lazy=True)
 
 class DMARCReport(db.Model):
-    __tablename__ = 'dmarc_reports'  # Explicitly set table name
+    __tablename__ = 'dmarc_reports'
     id = db.Column(db.Integer, primary_key=True)
     dmarc_record_id = db.Column(db.Integer, db.ForeignKey('dmarc_records.id'), nullable=False)
     report_date = db.Column(db.DateTime, default=datetime.utcnow)
@@ -73,7 +67,7 @@ class DMARCReport(db.Model):
     is_suspicious = db.Column(db.Boolean, default=False)
 
 class BlacklistMonitor(db.Model):
-    __tablename__ = 'blacklist_monitors'  # Explicitly set table name
+    __tablename__ = 'blacklist_monitors'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     domain = db.Column(db.String(255))
@@ -81,11 +75,11 @@ class BlacklistMonitor(db.Model):
     ip_version = db.Column(db.Integer)  # 4 or 6
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_checked = db.Column(db.DateTime)
-    status = db.Column(db.String(20))  # clean, listed, warning
+    status = db.Column(db.String(20))  # active, inactive
     blacklist_entries = db.relationship('BlacklistEntry', backref='monitor', lazy=True)
 
 class BlacklistEntry(db.Model):
-    __tablename__ = 'blacklist_entries'  # Explicitly set table name
+    __tablename__ = 'blacklist_entries'
     id = db.Column(db.Integer, primary_key=True)
     monitor_id = db.Column(db.Integer, db.ForeignKey('blacklist_monitors.id'), nullable=False)
     blacklist_name = db.Column(db.String(255))
@@ -95,7 +89,7 @@ class BlacklistEntry(db.Model):
     status = db.Column(db.String(20))  # active, resolved
 
 class CatchAllScore(db.Model):
-    __tablename__ = 'catch_all_scores'  # Explicitly set table name
+    __tablename__ = 'catch_all_scores'
     id = db.Column(db.Integer, primary_key=True)
     verification_id = db.Column(db.Integer, db.ForeignKey('verifications.id'), nullable=False)
     email = db.Column(db.String(255), nullable=False)
@@ -104,7 +98,7 @@ class CatchAllScore(db.Model):
     factors = db.Column(db.Text)
 
 class AppSumoCode(db.Model):
-    __tablename__ = 'appsumo_codes'  # Explicitly set table name
+    __tablename__ = 'appsumo_codes'
     id = db.Column(db.Integer, primary_key=True)
     code = db.Column(db.String(255), unique=True, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
