@@ -1,5 +1,8 @@
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, abort
+from flask import (
+    Flask, render_template, request, redirect, url_for, flash,
+    session, send_file, jsonify, abort, after_this_request
+)
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -608,104 +611,68 @@ def read_emails_from_file(filepath):
         
     return emails
 
-def process_file(filepath, user_id):
-    """Process the uploaded file and create a verification record."""
+def process_file(file_path, verification_id):
     try:
-        # Read emails from file
-        emails = read_emails_from_file(filepath)
+        # Initialize counters
+        total = 0
+        valid = 0
+        invalid = 0
+        risky = 0
         
-        if not emails:
-            raise ValueError("No valid emails found in file")
-
-        # Create verification record
-        verification = Verification(
-            user_id=user_id,
-            filename=os.path.basename(filepath),
-            total_emails=len(emails)
-        )
-        db.session.add(verification)
-        db.session.commit()
-
-        # Process each email
-        valid_count = 0
-        invalid_format = 0
-        disposable_count = 0
-        dns_error_count = 0
-        role_based_count = 0
-        total_reply_score = 0
-        total_person_score = 0
-        total_engagement_score = 0
-        results = {}
-
-        for email in emails:
-            email = email.strip()
-            result = verify_email(email)
-            results[email] = result
-            
-            if result['valid']:
-                valid_count += 1
-                total_reply_score += result['reply_score']
-                total_person_score += result['person_score']
-                total_engagement_score += result['engagement_score']
-            if result['invalid_format']:
-                invalid_format += 1
-            elif result['disposable']:
-                disposable_count += 1
-            elif result['dns_error']:
-                dns_error_count += 1
-            elif result['role_based']:
-                role_based_count += 1
-
-        # Update verification record
-        verification.valid_emails = valid_count
-        verification.invalid_format = invalid_format
-        verification.disposable = disposable_count
-        verification.dns_error = dns_error_count
-        verification.role_based = role_based_count
+        results = []
         
-        # Calculate average scores
-        if valid_count > 0:
-            verification.reply_score = total_reply_score / valid_count
-            verification.person_score = total_person_score / valid_count
-            verification.engagement_score = total_engagement_score / valid_count
-            verification.avg_score = (verification.reply_score + verification.person_score + verification.engagement_score) / 3
-
-        # Store results
-        verification.results = json.dumps(results)
-        db.session.commit()
-
-        # Generate Excel report
-        report_path = generate_excel_report(verification.id)
+        with open(file_path, 'r') as file:
+            for line in file:
+                email = line.strip()
+                if not email:  # Skip empty lines
+                    continue
+                    
+                total += 1
+                verification_result = verify_email(email)
+                
+                # Update counters based on verification result
+                if verification_result['valid']:
+                    valid += 1
+                elif verification_result['invalid_format']:
+                    invalid += 1
+                elif verification_result['disposable']:
+                    invalid += 1
+                elif verification_result['dns_error']:
+                    invalid += 1
+                elif verification_result['role_based']:
+                    invalid += 1
+                    
+                results.append({
+                    'email': email,
+                    'status': 'valid' if verification_result['valid'] else 'invalid',
+                    'score': verification_result.get('reply_score', 0),
+                    'details': verification_result.get('reason', {})
+                })
         
-        # Clean up
-        try:
-            os.remove(filepath)
-        except:
-            pass
+        # Update verification record with results
+        verification = Verification.query.get(verification_id)
+        if verification:
+            verification.total_emails = total
+            verification.valid_emails = valid
+            verification.invalid_emails = invalid
+            verification.results = json.dumps(results)
+            verification.status = 'completed'
+            db.session.commit()
             
         return {
-            'success': True,
-            'verification_id': verification.id,
-            'total_emails': verification.total_emails,
-            'valid_emails': verification.valid_emails,
-            'invalid_format': verification.invalid_format,
-            'disposable': verification.disposable,
-            'dns_error': verification.dns_error,
-            'role_based': verification.role_based,
-            'avg_score': verification.avg_score,
-            'reply_score': verification.reply_score,
-            'person_score': verification.person_score,
-            'engagement_score': verification.engagement_score,
-            'download_url': url_for('download_report', verification_id=verification.id)
+            'total': total,
+            'valid': valid,
+            'invalid': invalid,
+            'results': results
         }
         
     except Exception as e:
         logger.error(f"Error processing file: {str(e)}")
-        logger.error(traceback.format_exc())
-        try:
-            os.remove(filepath)
-        except:
-            pass
+        verification = Verification.query.get(verification_id)
+        if verification:
+            verification.status = 'failed'
+            verification.error_message = str(e)
+            db.session.commit()
         raise
 
 @app.route('/')
@@ -724,7 +691,7 @@ def dashboard():
     # Count all types of invalid emails
     verifications = Verification.query.filter_by(user_id=current_user.id).all()
     invalid_emails = sum([
-        v.invalid_format + v.disposable + v.dns_error + v.role_based 
+        v.invalid_emails 
         for v in verifications
     ])
     
@@ -770,25 +737,30 @@ def verify():
                 file.save(filepath)
                 
                 # Create verification record
-                verification = process_file(filepath, current_user.id)
+                verification = Verification(
+                    user_id=current_user.id,
+                    filename=filename,
+                    total_emails=0,
+                    valid_emails=0,
+                    invalid_emails=0,
+                    status='pending'
+                )
+                db.session.add(verification)
+                db.session.commit()
+
+                # Process the file
+                result = process_file(filepath, verification.id)
                 
-                if verification:
+                if result:
                     return jsonify({
                         'success': True,
                         'message': 'File processed successfully!',
                         'results': {
-                            'id': verification['verification_id'],
-                            'total_emails': verification['verification_id'],
-                            'valid_emails': verification['verification_id'],
-                            'invalid_format': verification['verification_id'],
-                            'disposable': verification['verification_id'],
-                            'dns_error': verification['verification_id'],
-                            'role_based': verification['verification_id'],
-                            'avg_score': verification['verification_id'],
-                            'reply_score': verification['verification_id'],
-                            'person_score': verification['verification_id'],
-                            'engagement_score': verification['verification_id'],
-                            'download_url': url_for('download_report', verification_id=verification['verification_id'])
+                            'id': verification.id,
+                            'total_emails': verification.total_emails,
+                            'valid_emails': verification.valid_emails,
+                            'invalid_emails': verification.invalid_emails,
+                            'download_url': url_for('download_report', verification_id=verification.id)
                         }
                     })
                 else:
@@ -862,7 +834,7 @@ def profile():
     total_verifications = Verification.query.filter_by(user_id=current_user.id).count()
     total_valid_emails = db.session.query(db.func.sum(Verification.valid_emails)).filter_by(user_id=current_user.id).scalar() or 0
     total_invalid_emails = db.session.query(
-        db.func.sum(Verification.invalid_format + Verification.disposable + Verification.dns_error + Verification.role_based)
+        db.func.sum(Verification.invalid_emails)
     ).filter_by(user_id=current_user.id).scalar() or 0
 
     return render_template('profile.html', 
