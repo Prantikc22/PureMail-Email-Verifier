@@ -4,9 +4,6 @@ import logging
 import time
 from sqlalchemy import text
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 def wait_for_db():
     max_retries = 30
     retry_interval = 2
@@ -28,45 +25,51 @@ def wait_for_db():
                 raise
 
 def init_db():
+    """Initialize the database with tables and initial data."""
     try:
         # Wait for database to be ready
         wait_for_db()
         
+        # Create all tables
         with app.app_context():
-            # Drop all tables first to ensure clean state
-            logger.info("Dropping all tables...")
-            db.drop_all()
-            db.session.commit()
-            
-            # Create all tables
-            logger.info("Creating all tables...")
             db.create_all()
-            db.session.commit()
-            
+            logger.info("Successfully created all database tables")
+
             # Check if admin user exists
-            logger.info("Checking for admin user...")
-            admin = User.query.filter_by(id=1).first()
+            admin = User.query.filter_by(email='admin@puremail.com').first()
             if not admin:
+                # Create admin user
                 admin = User(
-                    id=1,
                     username='admin@puremail.com',
-                    email='admin@puremail.com'
+                    email='admin@puremail.com',
+                    is_admin=True,
+                    credits=1000
                 )
                 admin.set_password('admin123')
                 db.session.add(admin)
                 db.session.commit()
-                logger.info("Admin user created successfully")
-            else:
-                logger.info("Admin user already exists")
-                
-    except SQLAlchemyError as e:
-        logger.error(f"Database error occurred: {str(e)}")
-        db.session.rollback()
-        raise
+                logger.info("Successfully created admin user")
+
+            logger.info("Database initialization completed successfully")
+            return True
+
     except Exception as e:
-        logger.error(f"An error occurred: {str(e)}")
+        logger.error(f"Error initializing database: {str(e)}")
         db.session.rollback()
-        raise
+        return False
 
 if __name__ == '__main__':
-    init_db()
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    logger = logging.getLogger(__name__)
+
+    # Initialize Flask app context
+    with app.app_context():
+        success = init_db()
+        if success:
+            logger.info("Database initialization successful")
+        else:
+            logger.error("Database initialization failed")

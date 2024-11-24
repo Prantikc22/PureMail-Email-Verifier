@@ -6,6 +6,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 db = SQLAlchemy()
 
 class User(UserMixin, db.Model):
+    __tablename__ = 'users'  # Explicitly set table name
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -23,8 +24,9 @@ class User(UserMixin, db.Model):
         return check_password_hash(self.password_hash, password)
 
 class Verification(db.Model):
+    __tablename__ = 'verifications'  # Explicitly set table name
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     filename = db.Column(db.String(255), nullable=False)
     date = db.Column(db.DateTime, default=datetime.utcnow)
     total_emails = db.Column(db.Integer, default=0)
@@ -46,8 +48,9 @@ class Verification(db.Model):
     catch_all_scores = db.relationship('CatchAllScore', backref='verification', lazy=True)
 
 class DMARCRecord(db.Model):
+    __tablename__ = 'dmarc_records'  # Explicitly set table name
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     domain = db.Column(db.String(255), nullable=False)
     policy = db.Column(db.String(50))  # none, quarantine, reject
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -58,8 +61,9 @@ class DMARCRecord(db.Model):
     reports = db.relationship('DMARCReport', backref='dmarc_record', lazy=True)
 
 class DMARCReport(db.Model):
+    __tablename__ = 'dmarc_reports'  # Explicitly set table name
     id = db.Column(db.Integer, primary_key=True)
-    dmarc_record_id = db.Column(db.Integer, db.ForeignKey('dmarc_record.id'), nullable=False)
+    dmarc_record_id = db.Column(db.Integer, db.ForeignKey('dmarc_records.id'), nullable=False)
     report_date = db.Column(db.DateTime, default=datetime.utcnow)
     source_ip = db.Column(db.String(45))
     authentication_results = db.Column(db.String(255))
@@ -69,8 +73,9 @@ class DMARCReport(db.Model):
     is_suspicious = db.Column(db.Boolean, default=False)
 
 class BlacklistMonitor(db.Model):
+    __tablename__ = 'blacklist_monitors'  # Explicitly set table name
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     domain = db.Column(db.String(255))
     ip_address = db.Column(db.String(45))
     ip_version = db.Column(db.Integer)  # 4 or 6
@@ -80,8 +85,9 @@ class BlacklistMonitor(db.Model):
     blacklist_entries = db.relationship('BlacklistEntry', backref='monitor', lazy=True)
 
 class BlacklistEntry(db.Model):
+    __tablename__ = 'blacklist_entries'  # Explicitly set table name
     id = db.Column(db.Integer, primary_key=True)
-    monitor_id = db.Column(db.Integer, db.ForeignKey('blacklist_monitor.id'), nullable=False)
+    monitor_id = db.Column(db.Integer, db.ForeignKey('blacklist_monitors.id'), nullable=False)
     blacklist_name = db.Column(db.String(255))
     listed_on = db.Column(db.DateTime, default=datetime.utcnow)
     delisted_on = db.Column(db.DateTime)
@@ -89,17 +95,19 @@ class BlacklistEntry(db.Model):
     status = db.Column(db.String(20))  # active, resolved
 
 class CatchAllScore(db.Model):
+    __tablename__ = 'catch_all_scores'  # Explicitly set table name
     id = db.Column(db.Integer, primary_key=True)
-    verification_id = db.Column(db.Integer, db.ForeignKey('verification.id'), nullable=False)
+    verification_id = db.Column(db.Integer, db.ForeignKey('verifications.id'), nullable=False)
     email = db.Column(db.String(255), nullable=False)
     score = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     factors = db.Column(db.Text)
 
 class AppSumoCode(db.Model):
+    __tablename__ = 'appsumo_codes'  # Explicitly set table name
     id = db.Column(db.Integer, primary_key=True)
     code = db.Column(db.String(255), unique=True, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     redeemed_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(20), default='active')  # active, redeemed, expired
