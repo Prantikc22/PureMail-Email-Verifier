@@ -30,20 +30,33 @@ from wtforms.validators import DataRequired
 import click
 import traceback
 import shutil
+import time
 
 # Initialize app and database
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///email_verifier.db')
-if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgres://'):
-    app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_URI'].replace('postgres://', 'postgresql://', 1)
+
+# Configure database URL with SSL mode
+database_url = os.environ.get('DATABASE_URL', 'sqlite:///email_verifier.db')
+if database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+if 'postgresql://' in database_url:
+    database_url += '?sslmode=require'
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_size': 10,
-    'max_overflow': 20,
+    'pool_size': 5,
+    'max_overflow': 10,
     'pool_timeout': 30,
     'pool_recycle': 1800,
+    'pool_pre_ping': True,
+    'connect_args': {
+        'sslmode': 'require',
+        'connect_timeout': 10
+    }
 }
+
 app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads'))
 app.config['MAX_CONTENT_LENGTH'] = int(os.environ.get('MAX_CONTENT_LENGTH', 10 * 1024 * 1024))  # 10MB max file size
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=60)
@@ -57,42 +70,77 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Initialize database
 from models import db, User, Verification, DMARCRecord, BlacklistMonitor, BlacklistEntry, CatchAllScore, AppSumoCode
-db.init_app(app)
-migrate = Migrate(app, db)
 
-# Initialize login manager
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login'
+def create_app():
+    db.init_app(app)
+    migrate = Migrate(app, db)
+    
+    # Initialize login manager
+    login_manager = LoginManager()
+    login_manager.init_app(app)
+    login_manager.login_view = 'login'
+    
+    @login_manager.user_loader
+    def load_user(user_id):
+        try:
+            return User.query.get(int(user_id))
+        except Exception as e:
+            logger.error(f"Error loading user: {str(e)}")
+            return None
+    
+    return app
+
+app = create_app()
 
 def init_database():
     """Initialize database tables and create admin user."""
-    try:
-        logger.info("Creating database tables...")
-        db.create_all()
-        
-        # Create admin user if not exists
-        admin = User.query.filter_by(email='admin@puremail.com').first()
-        if not admin:
-            logger.info("Creating admin user...")
-            admin = User(
-                username='admin@puremail.com',
-                email='admin@puremail.com',
-                is_admin=True,
-                credits=1000
-            )
-            admin.password_hash = generate_password_hash('admin123')
-            db.session.add(admin)
-            db.session.commit()
-            logger.info("Admin user created successfully")
-        
-        logger.info("Database initialization completed successfully")
-    except Exception as e:
-        logger.error(f"Error initializing database: {str(e)}")
-        logger.error(traceback.format_exc())
-        raise
+    max_retries = 5
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            logger.info(f"Database initialization attempt {attempt + 1}/{max_retries}")
+            with app.app_context():
+                # Test database connection
+                db.engine.connect()
+                logger.info("Database connection successful")
+                
+                # Create tables
+                db.create_all()
+                logger.info("Database tables created successfully")
+                
+                # Create admin user if not exists
+                admin = User.query.filter_by(email='admin@puremail.com').first()
+                if not admin:
+                    logger.info("Creating admin user...")
+                    admin = User(
+                        username='admin@puremail.com',
+                        email='admin@puremail.com',
+                        is_admin=True,
+                        credits=1000
+                    )
+                    admin.password_hash = generate_password_hash('admin123')
+                    db.session.add(admin)
+                    db.session.commit()
+                    logger.info("Admin user created successfully")
+                else:
+                    logger.info("Admin user already exists")
+                
+                logger.info("Database initialization completed successfully")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Database initialization attempt {attempt + 1} failed: {str(e)}")
+            logger.error(traceback.format_exc())
+            if attempt < max_retries - 1:
+                logger.info(f"Retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+                retry_delay *= 2  # Exponential backoff
+            else:
+                logger.error("All database initialization attempts failed")
+                raise
 
-# Initialize database tables and admin user
+# Initialize database with retry mechanism
 with app.app_context():
     init_database()
 
