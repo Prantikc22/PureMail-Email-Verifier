@@ -335,16 +335,18 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('contact') }}">
+                <a class="nav-link" href="https://www.logicwerk.com/contact-us" target="_blank">
                     <i class="fas fa-envelope me-2"></i>Contact
                 </a>
             </li>
+            {% if current_user.id == 1 %}
             <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('appsumo_landing') }}">
                     <i class="fas fa-gift me-2"></i>AppSumo Deal
                     <span class="badge bg-danger">Save 95%</span>
                 </a>
             </li>
+            {% endif %}
             <li class="nav-item mt-auto">
                 <a class="nav-link" href="{{ url_for('logout') }}">
                     <i class="fas fa-sign-out-alt"></i> <span>Logout</span>

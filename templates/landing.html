@@ -26,7 +26,7 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto align-items-center">
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-center">
                     <li class="nav-item">
                         <a class="nav-link" href="#features">Features</a>
                     </li>
@@ -36,18 +36,11 @@
                     <li class="nav-item">
                         <a class="nav-link" href="#testimonials">Testimonials</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('appsumo_landing') }}">
-                            <span class="badge bg-warning text-dark">
-                                <i class="fas fa-gift me-1"></i>AppSumo Deal
-                            </span>
-                        </a>
+                    <li class="nav-item ms-lg-3">
+                        <a class="btn btn-outline-light nav-btn" href="{{ url_for('login') }}">Login</a>
                     </li>
-                    <li class="nav-item ms-3">
-                        <a href="{{ url_for('login') }}" class="btn btn-outline-light px-4 py-2">Login</a>
-                    </li>
-                    <li class="nav-item ms-3">
-                        <a href="{{ url_for('register') }}" class="btn btn-light px-4 py-2">Sign Up Free</a>
+                    <li class="nav-item ms-lg-2">
+                        <a class="btn btn-light nav-btn" href="#pricing">Sign Up</a>
                     </li>
                 </ul>
             </div>
@@ -58,31 +51,12 @@
     <section class="hero-section">
         <div class="container h-100">
             <div class="row align-items-center justify-content-center min-vh-90">
-                <div class="col-lg-6">
+                <div class="col-lg-6 hero-content">
                     <h1 class="hero-title">AI-Powered Email Verification for Better Deliverability</h1>
                     <p class="hero-subtitle">Validate your email lists with 99.9% accuracy using our advanced AI technology</p>
-                    
-                    <!-- AppSumo Deal Alert -->
-                    <div class="alert alert-warning mb-4" role="alert">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-shrink-0">
-                                <i class="fas fa-gift fa-2x text-warning me-3"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                                <h4 class="alert-heading mb-1">🎉 Special AppSumo Deal!</h4>
-                                <p class="mb-0">Get lifetime access for just <span class="text-decoration-line-through">$199/month</span> <strong>$89</strong></p>
-                            </div>
-                            <div class="flex-shrink-0">
-                                <a href="{{ url_for('appsumo_landing') }}" class="btn btn-warning">
-                                    Claim Now
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-
                     <div class="hero-buttons">
-                        <a href="#pricing" class="btn btn-light btn-lg px-5">Get Started</a>
-                        <a href="#features" class="btn btn-outline-light btn-lg px-5">Learn More</a>
+                        <a href="#pricing" class="btn btn-light btn-lg">Get Started</a>
+                        <a href="#features" class="btn btn-outline-light btn-lg">Learn More</a>
                     </div>
                 </div>
                 <div class="col-lg-6">
@@ -216,7 +190,7 @@
             <div class="row justify-content-center mb-5">
                 <div class="col-lg-10">
                     <div class="card bg-dark text-white border-0 shadow-lg position-relative overflow-hidden">
-                        <div class="position-absolute top-0 start-0 w-100 h-100" style="background: linear-gradient(45deg, #FF6B6B, #4ECDC4); opacity: 0.9;"></div>
+                        <div class="position-absolute top-0 start-0 w-100 h-100" style="background: linear-gradient(135deg, #2C3E50, #3498DB); opacity: 0.95;"></div>
                         <div class="card-body p-5 position-relative">
                             <div class="row align-items-center">
                                 <div class="col-lg-8">
@@ -224,7 +198,7 @@
                                         <span class="badge bg-warning text-dark me-2">LIMITED TIME OFFER</span>
                                         <span class="badge bg-light text-dark">APPSUMO EXCLUSIVE</span>
                                     </div>
-                                    <h3 class="display-5 mb-3">🎉 Lifetime Deal Alert!</h3>
+                                    <h3 class="display-5 mb-3"> Lifetime Deal Alert!</h3>
                                     <div class="d-flex align-items-center mb-4">
                                         <div class="me-4">
                                             <span class="text-white-50 text-decoration-line-through h4">$199/month</span>
@@ -260,7 +234,7 @@
                                         <a href="{{ url_for('appsumo_landing') }}" class="btn btn-warning btn-lg">
                                             <i class="fas fa-gift me-2"></i>Claim Your Lifetime Deal
                                         </a>
-                                        <p class="small text-white-50 mt-3 mb-0">🔒 30-day money-back guarantee</p>
+                                        <p class="small text-white-50 mt-3 mb-0"> 30-day money-back guarantee</p>
                                     </div>
                                 </div>
                             </div>
@@ -271,59 +245,70 @@
             
             <div class="row g-4 justify-content-center">
                 <!-- Basic Plan -->
-                <div class="col-lg-4 col-md-6">
+                <div class="col-lg-4">
                     <div class="pricing-card">
-                        <h3 class="mb-4">Basic</h3>
-                        <div class="price-tag">
-                            $29<span>/month</span>
+                        <div class="pricing-name">Basic</div>
+                        <div class="pricing-description">Perfect for small businesses and startups</div>
+                        <div class="price-amount">
+                            <span class="currency">$</span>
+                            <span class="amount">29</span>
+                            <span class="period">/month</span>
                         </div>
-                        <p class="text-muted mb-4">Perfect for small businesses</p>
                         <ul class="pricing-features">
                             <li>5,000 Email Verifications</li>
-                            <li>Basic AI Analysis</li>
-                            <li>Email Syntax Check</li>
-                            <li>Domain Validation</li>
-                            <li>24/7 Support</li>
+                            <li>Real-time Verification</li>
+                            <li>API Access</li>
+                            <li>Email Support</li>
+                            <li>Basic Analytics</li>
                         </ul>
                         <a href="#" class="btn btn-outline-primary">Get Started</a>
                     </div>
                 </div>
 
                 <!-- Pro Plan -->
-                <div class="col-lg-4 col-md-6">
+                <div class="col-lg-4">
                     <div class="pricing-card popular">
-                        <div class="popular-badge">Most Popular</div>
-                        <h3 class="mb-4">Pro</h3>
-                        <div class="price-tag">
-                            $99<span>/month</span>
+                        <span class="popular-label">Most Popular</span>
+                        <div class="pricing-name">Pro</div>
+                        <div class="pricing-description">Ideal for growing teams and businesses</div>
+                        <div class="price-amount">
+                            <span class="currency">$</span>
+                            <span class="amount">79</span>
+                            <span class="period">/month</span>
                         </div>
-                        <p class="text-muted mb-4">Best for growing companies</p>
                         <ul class="pricing-features">
                             <li>25,000 Email Verifications</li>
-                            <li>Advanced AI Analysis</li>
                             <li>Real-time Verification</li>
-                            <li>Bulk Verification</li>
+                            <li>API Access</li>
                             <li>Priority Support</li>
+                            <li>Advanced Analytics</li>
+                            <li>Bulk Verification</li>
+                            <li>Custom Integration</li>
                         </ul>
                         <a href="#" class="btn btn-primary">Get Started</a>
                     </div>
                 </div>
 
                 <!-- Enterprise Plan -->
-                <div class="col-lg-4 col-md-6">
+                <div class="col-lg-4">
                     <div class="pricing-card">
-                        <h3 class="mb-4">Enterprise</h3>
-                        <div class="price-tag">
-                            $199<span>/month</span>
+                        <div class="pricing-name">Enterprise</div>
+                        <div class="pricing-description">For large organizations with custom needs</div>
+                        <div class="price-amount">
+                            <span class="currency">$</span>
+                            <span class="amount">199</span>
+                            <span class="period">/month</span>
                         </div>
-                        <p class="text-muted mb-4">For large organizations</p>
                         <ul class="pricing-features">
-                            <li>Unlimited Verifications</li>
-                            <li>Premium AI Analysis</li>
-                            <li>Custom Integration</li>
-                            <li>Dedicated Support</li>
-                            <li>SLA Guarantee</li>
+                            <li>100,000 Email Verifications</li>
+                            <li>Real-time Verification</li>
+                            <li>API Access</li>
+                            <li>24/7 Priority Support</li>
                             <li>Advanced Analytics</li>
+                            <li>Bulk Verification</li>
+                            <li>Custom Integration</li>
+                            <li>Dedicated Account Manager</li>
+                            <li>SLA Agreement</li>
                         </ul>
                         <a href="#" class="btn btn-outline-primary">Contact Sales</a>
                     </div>
@@ -342,8 +327,8 @@
                                 <h2 class="display-4 fw-bold mb-4">Ready to Improve Your<br>Email Marketing?</h2>
                                 <p class="lead text-muted mb-5">Experience the power of AI-driven email verification with 99.9% accuracy</p>
                                 <div class="cta-buttons d-flex justify-content-center gap-4">
-                                    <a href="#" class="btn btn-primary btn-lg px-5 py-3">Get Started</a>
-                                    <a href="#" class="btn btn-outline-primary btn-lg px-5 py-3">Contact Sales</a>
+                                    <a href="#pricing" class="btn btn-primary btn-lg px-5 py-3">Get Started</a>
+                                    <a href="https://logicwerk.com/contact-us" class="btn btn-outline-primary btn-lg px-5 py-3" target="_blank">Contact Sales</a>
                                 </div>
                             </div>
                         </div>
@@ -501,11 +486,11 @@
                 </div>
                 <div class="col-lg-8">
                     <div class="d-flex justify-content-between align-items-center">
-                        <p class="mb-0">&copy; 2023 Logicwerk. All rights reserved.</p>
+                        <p class="mb-0">&copy; 2024 Logicwerk. All rights reserved.</p>
                         <div class="footer-links">
-                            <a href="#" class="text-muted me-3">Privacy Policy</a>
-                            <a href="#" class="text-muted me-3">Terms of Service</a>
-                            <a href="#" class="text-muted">Contact</a>
+                            <a href="https://www.logicwerk.com/privacy-policy" target="_blank" class="text-muted me-3">Privacy Policy</a>
+                            <a href="https://www.logicwerk.com/terms-and-conditions" target="_blank" class="text-muted me-3">Terms of Service</a>
+                            <a href="https://www.logicwerk.com/contact-us" target="_blank" class="text-muted">Contact</a>
                         </div>
                     </div>
                 </div>

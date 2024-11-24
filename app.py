@@ -837,22 +837,52 @@ def process_file(filepath, user_id):
 # Initialize database tables and create test user
 def init_db():
     with app.app_context():
-        # Create all tables
+        logger.info('Creating database tables...')
         db.create_all()
+        logger.info('Database tables created successfully')
         
+        # Create admin user (id=1)
+        logger.info('Checking for admin user...')
+        admin_user = User.query.filter_by(id=1).first()
+        if not admin_user:
+            logger.info('Admin user not found, creating new admin user...')
+            admin_user = User(
+                id=1,
+                username='admin',
+                email='admin@puremail.com'
+            )
+            admin_user.set_password('admin123')
+            db.session.add(admin_user)
+            try:
+                db.session.commit()
+                logger.info('Created admin user successfully')
+            except Exception as e:
+                db.session.rollback()
+                logger.error(f'Failed to create admin user: {str(e)}')
+                logger.error(traceback.format_exc())
+        else:
+            logger.info('Admin user already exists')
+
         # Check if test user exists
+        logger.info('Checking for test user...')
         test_user = User.query.filter_by(username='test').first()
         if not test_user:
-            # Create test user
+            logger.info('Test user not found, creating new test user...')
             test_user = User(
                 username='test',
                 email='test@example.com'
             )
             test_user.set_password('test123')
             db.session.add(test_user)
-            db.session.commit()
-            logger.info('Created test user')
-
+            try:
+                db.session.commit()
+                logger.info('Created test user successfully')
+            except Exception as e:
+                db.session.rollback()
+                logger.error(f'Failed to create test user: {str(e)}')
+                logger.error(traceback.format_exc())
+        else:
+            logger.info('Test user already exists')
 @app.route('/')
 def index():
     if current_user.is_authenticated:
@@ -862,42 +892,38 @@ def index():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    # Get recent verifications
-    recent_verifications = Verification.query.filter_by(user_id=current_user.id)\
-        .order_by(Verification.date.desc())\
-        .limit(5).all()
-    
-    # Calculate total statistics
+    # Get user's verification statistics
     total_verifications = Verification.query.filter_by(user_id=current_user.id).count()
-    total_emails = db.session.query(db.func.sum(Verification.total_emails))\
-        .filter_by(user_id=current_user.id).scalar() or 0
-    total_valid = db.session.query(db.func.sum(Verification.valid_emails))\
-        .filter_by(user_id=current_user.id).scalar() or 0
-    total_invalid = total_emails - total_valid if total_emails > 0 else 0
+    valid_emails = sum([v.valid_emails for v in Verification.query.filter_by(user_id=current_user.id).all()])
     
-    # Calculate percentages for the donut chart
-    if total_emails > 0:
-        valid_percent = round((total_valid / total_emails) * 100, 1)
-        invalid_percent = round((total_invalid / total_emails) * 100, 1)
-    else:
-        valid_percent = invalid_percent = 0
+    # Count all types of invalid emails
+    verifications = Verification.query.filter_by(user_id=current_user.id).all()
+    invalid_emails = sum([
+        v.invalid_format + v.disposable + v.dns_error + v.role_based 
+        for v in verifications
+    ])
     
-    # Get detailed error statistics
-    total_format_errors = db.session.query(db.func.sum(Verification.invalid_format))\
-        .filter_by(user_id=current_user.id).scalar() or 0
-    total_disposable = db.session.query(db.func.sum(Verification.disposable))\
-        .filter_by(user_id=current_user.id).scalar() or 0
-    total_dns_errors = db.session.query(db.func.sum(Verification.dns_error))\
-        .filter_by(user_id=current_user.id).scalar() or 0
-    total_role_based = db.session.query(db.func.sum(Verification.role_based))\
-        .filter_by(user_id=current_user.id).scalar() or 0
+    stats = {
+        'total_verifications': total_verifications,
+        'valid_emails': valid_emails,
+        'invalid_emails': invalid_emails
+    }
     
-    return render_template('dashboard.html',
-                         stats={
-                             'total_verifications': total_verifications,
-                             'valid_emails': total_valid,
-                             'invalid_emails': total_invalid
-                         })
+    # Get AppSumo code statistics if user is admin
+    total_codes = 0
+    active_codes = 0
+    redeemed_codes = 0
+    
+    if current_user.id == 1:  # Admin user
+        total_codes = AppSumoCode.query.count()
+        active_codes = AppSumoCode.query.filter_by(status='active').count()
+        redeemed_codes = AppSumoCode.query.filter_by(status='redeemed').count()
+    
+    return render_template('dashboard.html', 
+                         stats=stats,
+                         total_codes=total_codes,
+                         active_codes=active_codes,
+                         redeemed_codes=redeemed_codes)
 
 @app.route('/verify', methods=['GET', 'POST'])
 @login_required
@@ -1019,11 +1045,72 @@ def profile():
                          total_valid_emails=total_valid_emails,
                          total_invalid_emails=total_invalid_emails)
 
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    # Redirect to pricing page for now
+    return redirect(url_for('landing') + '#pricing')
+
+@app.route('/appsumo-register', methods=['GET', 'POST'])
+def appsumo_register():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        appsumo_code = request.form.get('appsumo_code')
+
+        # Input validation
+        if not all([username, email, password, appsumo_code]):
+            flash('All fields are required', 'error')
+            return redirect(url_for('landing') + '#pricing')
+
+        # Check if user already exists
+        if User.query.filter_by(username=username).first():
+            flash('Username already exists', 'error')
+            return redirect(url_for('landing') + '#pricing')
+        if User.query.filter_by(email=email).first():
+            flash('Email already registered', 'error')
+            return redirect(url_for('landing') + '#pricing')
+
+        # Verify AppSumo code
+        code = AppSumoCode.query.filter_by(code=appsumo_code, status='active').first()
+        if not code:
+            flash('Invalid or already used AppSumo code', 'error')
+            return redirect(url_for('landing') + '#pricing')
+
+        try:
+            # Start database transaction
+            db.session.begin_nested()
+
+            # Create new user
+            user = User(username=username, email=email)
+            user.set_password(password)
+            db.session.add(user)
+            db.session.flush()  # This assigns the user.id
+
+            # Mark code as redeemed
+            code.user_id = user.id
+            code.status = 'redeemed'
+            code.redeemed_at = datetime.utcnow()
+
+            # Commit the transaction
+            db.session.commit()
+
+            # Log the user in
+            login_user(user)
+            flash('Successfully registered with AppSumo code! Welcome to PureMail!', 'success')
+            return redirect(url_for('dashboard'))
+
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error during AppSumo registration: {str(e)}")
+            flash('An error occurred during registration. Please try again.', 'error')
+            return redirect(url_for('landing') + '#pricing')
+
+    return render_template('register.html')
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
-    
+    # Only allow AppSumo users to log in for now
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
@@ -1074,46 +1161,6 @@ def download_report(verification_id):
         flash('Error downloading report', 'error')
         return redirect(url_for('history'))
 
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
-    
-    if request.method == 'POST':
-        username = request.form.get('username')
-        email = request.form.get('email')
-        password = request.form.get('password')
-        confirm_password = request.form.get('confirm_password')
-        
-        # Validate input
-        if not username or not email or not password or not confirm_password:
-            flash('All fields are required', 'error')
-            return redirect(url_for('register'))
-            
-        if password != confirm_password:
-            flash('Passwords do not match', 'error')
-            return redirect(url_for('register'))
-            
-        # Check if username or email already exists
-        if User.query.filter_by(username=username).first():
-            flash('Username already exists', 'error')
-            return redirect(url_for('register'))
-            
-        if User.query.filter_by(email=email).first():
-            flash('Email already registered', 'error')
-            return redirect(url_for('register'))
-            
-        # Create new user
-        user = User(username=username, email=email)
-        user.set_password(password)
-        db.session.add(user)
-        db.session.commit()
-        
-        flash('Registration successful! Please login.', 'success')
-        return redirect(url_for('login'))
-    
-    return render_template('register.html')
-
 @app.route('/contact')
 def contact():
     return render_template('contact.html')
@@ -1123,62 +1170,8 @@ def appsumo_landing():
     return render_template('appsumo.html')
 
 @app.route('/appsumo/register', methods=['GET', 'POST'])
-def appsumo_register():
-    if request.method == 'POST':
-        username = request.form.get('username')
-        email = request.form.get('email')
-        password = request.form.get('password')
-        appsumo_code = request.form.get('appsumo_code')
-
-        # Input validation
-        if not all([username, email, password, appsumo_code]):
-            flash('All fields are required', 'error')
-            return redirect(url_for('appsumo_landing'))
-
-        # Check if user already exists
-        if User.query.filter_by(username=username).first():
-            flash('Username already exists', 'error')
-            return redirect(url_for('appsumo_landing'))
-        if User.query.filter_by(email=email).first():
-            flash('Email already registered', 'error')
-            return redirect(url_for('appsumo_landing'))
-
-        # Verify AppSumo code
-        code = AppSumoCode.query.filter_by(code=appsumo_code, status='active').first()
-        if not code:
-            flash('Invalid or already used AppSumo code', 'error')
-            return redirect(url_for('appsumo_landing'))
-
-        try:
-            # Start database transaction
-            db.session.begin_nested()
-
-            # Create new user
-            user = User(username=username, email=email)
-            user.set_password(password)
-            db.session.add(user)
-            db.session.flush()  # This assigns the user.id
-
-            # Mark code as redeemed
-            code.user_id = user.id
-            code.status = 'redeemed'
-            code.redeemed_at = datetime.utcnow()
-
-            # Commit the transaction
-            db.session.commit()
-
-            # Log the user in
-            login_user(user)
-            flash('Successfully registered with AppSumo code! Welcome to PureMail!', 'success')
-            return redirect(url_for('dashboard'))
-
-        except Exception as e:
-            db.session.rollback()
-            app.logger.error(f"Error during AppSumo registration: {str(e)}")
-            flash('An error occurred during registration. Please try again.', 'error')
-            return redirect(url_for('appsumo_landing'))
-
-    return redirect(url_for('appsumo_landing'))
+def appsumo_register_route():
+    return redirect(url_for('appsumo_register'))
 
 @app.route('/redeem-code', methods=['POST'])
 @login_required
@@ -1201,6 +1194,47 @@ def redeem_code():
     db.session.commit()
     
     flash('Successfully redeemed AppSumo code! Welcome to PureMail Lifetime Access!', 'success')
+    return redirect(url_for('dashboard'))
+
+@app.route('/import-appsumo-codes', methods=['POST'])
+@login_required
+def import_appsumo_codes():
+    if 'file' not in request.files:
+        flash('No file uploaded', 'error')
+        return redirect(url_for('dashboard'))
+    
+    file = request.files['file']
+    if file.filename == '':
+        flash('No file selected', 'error')
+        return redirect(url_for('dashboard'))
+    
+    if not file.filename.endswith('.xlsx'):
+        flash('Please upload an Excel file (.xlsx)', 'error')
+        return redirect(url_for('dashboard'))
+    
+    try:
+        # Read the Excel file
+        df = pd.read_excel(file, usecols=['Codes'])
+        codes = df['Codes'].tolist()
+        
+        # Add each code to the database
+        codes_added = 0
+        for code in codes:
+            # Skip if code already exists
+            if AppSumoCode.query.filter_by(code=str(code)).first():
+                continue
+                
+            new_code = AppSumoCode(code=str(code))
+            db.session.add(new_code)
+            codes_added += 1
+        
+        db.session.commit()
+        flash(f'Successfully imported {codes_added} AppSumo codes', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error importing codes: {str(e)}', 'error')
+    
     return redirect(url_for('dashboard'))
 
 @app.cli.command('generate-appsumo-codes')
@@ -1230,5 +1264,34 @@ def generate_appsumo_codes(count):
     print(f"Successfully generated {codes_created} AppSumo codes")
 
 if __name__ == '__main__':
-    init_db()
+    # Initialize the database and create admin user if not exists
+    with app.app_context():
+        try:
+            logger.info('Checking database initialization...')
+            # Create tables if they don't exist
+            db.create_all()
+            logger.info('Database tables verified successfully')
+            
+            # Check if admin user exists, create if not
+            admin_user = User.query.filter_by(id=1).first()
+            if not admin_user:
+                logger.info('Creating admin user...')
+                admin_user = User(
+                    id=1,
+                    username='admin',
+                    email='admin@puremail.com'
+                )
+                admin_user.set_password('admin123')
+                db.session.add(admin_user)
+                db.session.commit()
+                logger.info('Admin user created successfully')
+            else:
+                logger.info('Admin user already exists')
+            
+        except Exception as e:
+            logger.error(f'Error during database initialization: {str(e)}')
+            logger.error(traceback.format_exc())
+            raise
+    
+    # Run the app
     app.run(host='0.0.0.0', port=3001, debug=True)
