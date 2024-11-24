@@ -2,19 +2,21 @@ from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+import json
+from app import db
 
 db = SQLAlchemy()
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
+    username = db.Column(db.String(64), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_admin = db.Column(db.Boolean, default=False)
-    credits = db.Column(db.Integer, default=0)
     verifications = db.relationship('Verification', backref='user', lazy=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    credits = db.Column(db.Integer, default=0)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -30,15 +32,25 @@ class Verification(db.Model):
     date = db.Column(db.DateTime, default=datetime.utcnow)
     total_emails = db.Column(db.Integer, default=0)
     valid_emails = db.Column(db.Integer, default=0)
-    invalid_format = db.Column(db.Integer, default=0)
-    disposable = db.Column(db.Integer, default=0)
-    dns_error = db.Column(db.Integer, default=0)
-    role_based = db.Column(db.Integer, default=0)
-    avg_score = db.Column(db.Float, default=0.0)
-    reply_score = db.Column(db.Float, default=0.0)
-    person_score = db.Column(db.Float, default=0.0)
-    engagement_score = db.Column(db.Float, default=0.0)
-    
+    invalid_emails = db.Column(db.Integer, default=0)
+    results = db.Column(db.Text)
+    status = db.Column(db.String(50), default='pending')
+    error_message = db.Column(db.Text)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'filename': self.filename,
+            'date': self.date.isoformat() if self.date else None,
+            'total_emails': self.total_emails,
+            'valid_emails': self.valid_emails,
+            'invalid_emails': self.invalid_emails,
+            'status': self.status,
+            'error_message': self.error_message,
+            'results': json.loads(self.results) if self.results else None
+        }
+
     # Relationships
     catch_all_scores = db.relationship('CatchAllScore', backref='verification', lazy=True)
 
