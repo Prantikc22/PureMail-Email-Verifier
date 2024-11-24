@@ -43,10 +43,30 @@ app = Flask(__name__)
 
 # Load configuration
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///puremail.db')
-if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgres://'):
-    app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_URI'].replace('postgres://', 'postgresql://', 1)
+
+# Configure database URL with SSL mode
+database_url = os.environ.get('DATABASE_URL', 'sqlite:///puremail.db')
+if database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+
+# Add SSL mode for PostgreSQL
+if database_url.startswith('postgresql://'):
+    if '?' in database_url:
+        database_url += '&sslmode=require'
+    else:
+        database_url += '?sslmode=require'
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,
+    'pool_recycle': 300,
+    'connect_args': {
+        'sslmode': 'require',
+        'connect_timeout': 10
+    }
+}
+
 app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB max file size
 
@@ -625,25 +645,38 @@ def init_database():
     """Initialize database with retries."""
     max_retries = 5
     retry_count = 0
-    
+    retry_delay = 5  # seconds
+
     while retry_count < max_retries:
         try:
-            retry_count += 1
-            logger.info(f"Database initialization attempt {retry_count}/{max_retries}")
-            
-            with app.app_context():
-                db.create_all()
-                
+            logger.info(f"Attempting database initialization (attempt {retry_count + 1}/{max_retries})")
+            db.create_all()
             logger.info("Database initialized successfully")
-            return
             
+            # Create admin user if not exists
+            admin = User.query.filter_by(username='admin').first()
+            if not admin:
+                admin = User(
+                    username='admin',
+                    email='admin@puremail.com',
+                    is_admin=True,
+                    credits=1000
+                )
+                admin.set_password('admin')
+                db.session.add(admin)
+                db.session.commit()
+                logger.info("Admin user created successfully")
+            
+            return True
         except Exception as e:
-            logger.warning(f"Database initialization attempt {retry_count} failed: {str(e)}")
+            retry_count += 1
             if retry_count == max_retries:
                 logger.error(f"Failed to initialize database after {max_retries} attempts: {str(e)}")
-                logger.error(traceback.format_exc())
                 raise
-            time.sleep(2 ** retry_count)  # Exponential backoff
+            logger.warning(f"Database initialization failed (attempt {retry_count}/{max_retries}): {str(e)}")
+            logger.info(f"Retrying in {retry_delay} seconds...")
+            time.sleep(retry_delay)
+            retry_delay *= 2  # Exponential backoff
 
 # Initialize database
 with app.app_context():
