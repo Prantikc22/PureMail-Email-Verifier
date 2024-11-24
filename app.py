@@ -886,7 +886,7 @@ def init_db():
         else:
             logger.info('Test user already exists')
 @app.route('/')
-def index():
+def landing():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
     return render_template('landing.html')
@@ -1049,7 +1049,7 @@ def profile():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    # Redirect to pricing page for now
+    # Redirect to pricing section of landing page
     return redirect(url_for('landing') + '#pricing')
 
 @app.route('/appsumo-register', methods=['GET', 'POST'])

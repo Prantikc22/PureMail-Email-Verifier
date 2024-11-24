@@ -2,7 +2,9 @@ services:
   - type: web
     name: puremail
     env: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: |
+      pip install -r requirements.txt
+      python init_db.py
     startCommand: gunicorn -c gunicorn.conf.py app:app
     envVars:
       - key: PYTHON_VERSION
