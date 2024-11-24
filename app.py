@@ -1,24 +1,20 @@
+import os
+import json
+import logging
+import traceback
 from datetime import datetime, timedelta
 from flask import (
     Flask, render_template, request, redirect, url_for, flash,
     session, send_file, jsonify, abort, after_this_request
 )
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from werkzeug.urls import url_parse
-from flask_migrate import Migrate
 from werkzeug.utils import secure_filename
-import os
-import logging
-import pandas as pd
-import re
-import dns.resolver
-import smtplib
-import socket
-import json
-import secrets
-import string
+from flask_login import login_user, login_required, logout_user, current_user
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from flask_wtf import FlaskForm
+from wtforms import FileField, SubmitField
+from wtforms.validators import DataRequired
 from email_validator import validate_email, EmailNotValidError
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
@@ -27,105 +23,44 @@ import xlsxwriter
 import uuid
 import io
 import random
-from flask_wtf import FlaskForm
-from wtforms import FileField, SubmitField
-from wtforms.validators import DataRequired
 import click
-import traceback
-import shutil
 import time
 from functools import wraps
+import pandas as pd
+import re
+import dns.resolver
+import smtplib
+import socket
+import secrets
+import string
+from flask_login import LoginManager, UserMixin
+
+# Import extensions
+from extensions import db, migrate, login_manager
+
+# Import models
+from models import User, Verification, DMARCRecord, BlacklistMonitor, BlacklistEntry, CatchAllScore, AppSumoCode
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize app
+# Initialize Flask app
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
 
-def get_database_url():
-    """Get database URL with proper configuration."""
-    url = os.getenv('DATABASE_URL')
-    if url and url.startswith('postgres://'):
-        url = url.replace('postgres://', 'postgresql://', 1)
-    
-    if not url:
-        url = 'sqlite:///test.db'
-    
-    # Add SSL mode for PostgreSQL
-    if 'postgresql://' in url:
-        url += '?sslmode=require'
-    
-    return url
+# Load configuration
+app.config.from_object('config.Config')
 
-def init_database():
-    """Initialize database with retries."""
-    max_retries = 5
-    retry_count = 0
-    
-    while retry_count < max_retries:
-        try:
-            retry_count += 1
-            logger.info(f"Database initialization attempt {retry_count}/{max_retries}")
-            
-            # Configure SQLAlchemy
-            app.config['SQLALCHEMY_DATABASE_URI'] = get_database_url()
-            app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-            app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-                'pool_size': 5,
-                'max_overflow': 10,
-                'pool_timeout': 30,
-                'pool_recycle': 1800,
-                'pool_pre_ping': True,
-                'connect_args': {
-                    'sslmode': 'require',
-                    'keepalives': 1,
-                    'keepalives_idle': 30,
-                    'keepalives_interval': 10,
-                    'keepalives_count': 5
-                }
-            }
-            
-            # Initialize database
-            db.init_app(app)
-            with app.app_context():
-                db.create_all()
-                
-            logger.info("Database initialized successfully")
-            return
-            
-        except Exception as e:
-            logger.warning(f"Database initialization attempt {retry_count} failed: {str(e)}")
-            if retry_count == max_retries:
-                logger.error(f"Failed to initialize database after {max_retries} attempts: {str(e)}")
-                logger.error(traceback.format_exc())
-                raise
-            time.sleep(2 ** retry_count)  # Exponential backoff
+# Initialize extensions with app
+db.init_app(app)
+migrate.init_app(app, db)
+login_manager.init_app(app)
 
-# Initialize upload folder
+# Create upload folder
 app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads'))
 app.config['MAX_CONTENT_LENGTH'] = int(os.environ.get('MAX_CONTENT_LENGTH', 10 * 1024 * 1024))  # 10MB max file size
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=60)
-
-# Create upload folder if it doesn't exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-
-# Import models and initialize extensions
-from models import db, User, Verification, DMARCRecord, BlacklistMonitor, BlacklistEntry, CatchAllScore, AppSumoCode
-
-# Initialize Flask extensions
-migrate = Migrate(app, db)
-login_manager = LoginManager(app)
-login_manager.login_view = 'login'
-
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
-
-# Initialize database with retry mechanism
-with app.app_context():
-    init_database()
 
 # Enhanced validation constants
 HONEYPOT_PATTERNS = {
@@ -674,6 +609,39 @@ def process_file(file_path, verification_id):
             verification.error_message = str(e)
             db.session.commit()
         raise
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+# Initialize database with retry mechanism
+def init_database():
+    """Initialize database with retries."""
+    max_retries = 5
+    retry_count = 0
+    
+    while retry_count < max_retries:
+        try:
+            retry_count += 1
+            logger.info(f"Database initialization attempt {retry_count}/{max_retries}")
+            
+            with app.app_context():
+                db.create_all()
+                
+            logger.info("Database initialized successfully")
+            return
+            
+        except Exception as e:
+            logger.warning(f"Database initialization attempt {retry_count} failed: {str(e)}")
+            if retry_count == max_retries:
+                logger.error(f"Failed to initialize database after {max_retries} attempts: {str(e)}")
+                logger.error(traceback.format_exc())
+                raise
+            time.sleep(2 ** retry_count)  # Exponential backoff
+
+# Initialize database
+with app.app_context():
+    init_database()
 
 @app.route('/')
 def landing():
