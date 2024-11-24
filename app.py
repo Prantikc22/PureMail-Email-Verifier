@@ -36,7 +36,7 @@ import time
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize app and database
+# Initialize app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
 
@@ -64,12 +64,6 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     }
 }
 
-# Initialize Flask extensions
-db = SQLAlchemy(app)
-migrate = Migrate(app, db)
-login_manager = LoginManager(app)
-login_manager.login_view = 'login'
-
 # Initialize upload folder
 app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads'))
 app.config['MAX_CONTENT_LENGTH'] = int(os.environ.get('MAX_CONTENT_LENGTH', 10 * 1024 * 1024))  # 10MB max file size
@@ -78,78 +72,57 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=60)
 # Create upload folder if it doesn't exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# Initialize database
-from models import User, Verification, DMARCRecord, BlacklistMonitor, BlacklistEntry, CatchAllScore, AppSumoCode
+# Import models and initialize extensions
+from models import db, User, Verification, DMARCRecord, BlacklistMonitor, BlacklistEntry, CatchAllScore, AppSumoCode
 
-def create_app():
-    db.init_app(app)
-    migrate = Migrate(app, db)
-    
-    # Initialize login manager
-    login_manager.init_app(app)
-    login_manager.login_view = 'login'
-    
-    @login_manager.user_loader
-    def load_user(user_id):
-        try:
-            return User.query.get(int(user_id))
-        except Exception as e:
-            logger.error(f"Error loading user: {str(e)}")
-            return None
-    
-    return app
+# Initialize Flask extensions
+db.init_app(app)
+migrate = Migrate(app, db)
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
 
-app = create_app()
-
-def init_database():
-    """Initialize database tables and create admin user."""
-    max_retries = 5
-    retry_delay = 2
-    
-    for attempt in range(max_retries):
-        try:
-            logger.info(f"Database initialization attempt {attempt + 1}/{max_retries}")
-            with app.app_context():
-                # Test database connection
-                db.engine.connect()
-                logger.info("Database connection successful")
-                
-                # Create tables
-                db.create_all()
-                logger.info("Database tables created successfully")
-                
-                # Create admin user if not exists
-                admin = User.query.filter_by(email='admin@puremail.com').first()
-                if not admin:
-                    logger.info("Creating admin user...")
-                    admin = User(
-                        username='admin@puremail.com',
-                        email='admin@puremail.com',
-                        is_admin=True,
-                        credits=1000
-                    )
-                    admin.password_hash = generate_password_hash('admin123')
-                    db.session.add(admin)
-                    db.session.commit()
-                    logger.info("Admin user created successfully")
-                else:
-                    logger.info("Admin user already exists")
-                
-                logger.info("Database initialization completed successfully")
-                return True
-                
-        except Exception as e:
-            logger.error(f"Database initialization attempt {attempt + 1} failed: {str(e)}")
-            logger.error(traceback.format_exc())
-            if attempt < max_retries - 1:
-                logger.info(f"Retrying in {retry_delay} seconds...")
-                time.sleep(retry_delay)
-                retry_delay *= 2  # Exponential backoff
-            else:
-                logger.error("All database initialization attempts failed")
-                raise
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
 # Initialize database with retry mechanism
+def init_database():
+    max_retries = 5
+    retry_count = 0
+    
+    while retry_count < max_retries:
+        try:
+            logger.info(f"Database initialization attempt {retry_count + 1}/{max_retries}")
+            db.create_all()
+            
+            # Check if admin user exists
+            admin = User.query.filter_by(email='admin@puremail.com').first()
+            if not admin:
+                admin = User(
+                    username='admin',
+                    email='admin@puremail.com',
+                    is_admin=True,
+                    credits=9999
+                )
+                admin.set_password('admin123')
+                db.session.add(admin)
+                db.session.commit()
+                logger.info("Admin user created successfully")
+            else:
+                logger.info("Admin user already exists")
+            
+            logger.info("Database initialization completed successfully")
+            break
+            
+        except Exception as e:
+            retry_count += 1
+            if retry_count == max_retries:
+                logger.error(f"Failed to initialize database after {max_retries} attempts: {str(e)}")
+                logger.error(traceback.format_exc())
+                raise
+            logger.warning(f"Database initialization attempt {retry_count} failed: {str(e)}")
+            time.sleep(2 ** retry_count)  # Exponential backoff
+
 with app.app_context():
     init_database()
 
@@ -914,10 +887,6 @@ def process_file(filepath, user_id):
         except:
             pass
         raise
-
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
 
 @app.route('/')
 def landing():
