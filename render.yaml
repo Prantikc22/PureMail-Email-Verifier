@@ -3,20 +3,7 @@ services:
     name: puremail
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: >
-      python -c "
-      from app import db, app;
-      from models import User;
-      from werkzeug.security import generate_password_hash;
-      with app.app_context():
-          db.create_all();
-          if not User.query.filter_by(email='admin@puremail.com').first():
-              admin = User(username='admin@puremail.com', email='admin@puremail.com', is_admin=True, credits=1000);
-              admin.password_hash = generate_password_hash('admin123');
-              db.session.add(admin);
-              db.session.commit()
-      " &&
-      gunicorn app:app
+    startCommand: gunicorn app:app
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
@@ -32,10 +19,12 @@ services:
         value: /opt/render/project/src/uploads
       - key: MAX_CONTENT_LENGTH
         value: 10485760
+      - key: SQLALCHEMY_TRACK_MODIFICATIONS
+        value: "False"
+      - key: SQLALCHEMY_ENGINE_OPTIONS
+        value: '{"pool_size": 10, "max_overflow": 20, "pool_timeout": 30, "pool_recycle": 1800}'
 
 databases:
   - name: puremail-db
-    databaseName: puremail
-    user: puremail
     plan: free
-    ipAllowList: [] # Allow all IPs
+    ipAllowList: []

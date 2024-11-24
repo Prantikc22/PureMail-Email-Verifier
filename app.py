@@ -38,9 +38,19 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:/
 if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgres://'):
     app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_URI'].replace('postgres://', 'postgresql://', 1)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_size': 10,
+    'max_overflow': 20,
+    'pool_timeout': 30,
+    'pool_recycle': 1800,
+}
 app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads'))
 app.config['MAX_CONTENT_LENGTH'] = int(os.environ.get('MAX_CONTENT_LENGTH', 10 * 1024 * 1024))  # 10MB max file size
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=60)
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Create upload folder if it doesn't exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -54,25 +64,37 @@ migrate = Migrate(app, db)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
-login_manager.login_message_category = 'info'
 
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
+def init_database():
+    """Initialize database tables and create admin user."""
+    try:
+        logger.info("Creating database tables...")
+        db.create_all()
+        
+        # Create admin user if not exists
+        admin = User.query.filter_by(email='admin@puremail.com').first()
+        if not admin:
+            logger.info("Creating admin user...")
+            admin = User(
+                username='admin@puremail.com',
+                email='admin@puremail.com',
+                is_admin=True,
+                credits=1000
+            )
+            admin.password_hash = generate_password_hash('admin123')
+            db.session.add(admin)
+            db.session.commit()
+            logger.info("Admin user created successfully")
+        
+        logger.info("Database initialization completed successfully")
+    except Exception as e:
+        logger.error(f"Error initializing database: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('app.log'),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
-
-# Create required directories
-os.makedirs('logs', exist_ok=True)
+# Initialize database tables and admin user
+with app.app_context():
+    init_database()
 
 # Enhanced validation constants
 HONEYPOT_PATTERNS = {
@@ -836,55 +858,10 @@ def process_file(filepath, user_id):
             pass
         raise
 
-# Initialize database tables and create test user
-def init_db():
-    with app.app_context():
-        logger.info('Creating database tables...')
-        db.create_all()
-        logger.info('Database tables created successfully')
-        
-        # Create admin user (id=1)
-        logger.info('Checking for admin user...')
-        admin_user = User.query.filter_by(id=1).first()
-        if not admin_user:
-            logger.info('Admin user not found, creating new admin user...')
-            admin_user = User(
-                id=1,
-                username='admin',
-                email='admin@puremail.com'
-            )
-            admin_user.set_password('admin123')
-            db.session.add(admin_user)
-            try:
-                db.session.commit()
-                logger.info('Created admin user successfully')
-            except Exception as e:
-                db.session.rollback()
-                logger.error(f'Failed to create admin user: {str(e)}')
-                logger.error(traceback.format_exc())
-        else:
-            logger.info('Admin user already exists')
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
-        # Check if test user exists
-        logger.info('Checking for test user...')
-        test_user = User.query.filter_by(username='test').first()
-        if not test_user:
-            logger.info('Test user not found, creating new test user...')
-            test_user = User(
-                username='test',
-                email='test@example.com'
-            )
-            test_user.set_password('test123')
-            db.session.add(test_user)
-            try:
-                db.session.commit()
-                logger.info('Created test user successfully')
-            except Exception as e:
-                db.session.rollback()
-                logger.error(f'Failed to create test user: {str(e)}')
-                logger.error(traceback.format_exc())
-        else:
-            logger.info('Test user already exists')
 @app.route('/')
 def landing():
     if current_user.is_authenticated:
@@ -1047,7 +1024,7 @@ def profile():
                          total_valid_emails=total_valid_emails,
                          total_invalid_emails=total_invalid_emails)
 
-@app.route('/register', methods=['GET', 'POST'])
+@app.route('/register')
 def register():
     # Redirect to pricing section of landing page
     return redirect(url_for('landing') + '#pricing')
