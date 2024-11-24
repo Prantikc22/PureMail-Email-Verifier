@@ -307,11 +307,11 @@
     </style>
 </head>
 <body class="{% block body_class %}{% endblock %}">
-    {% if current_user.is_authenticated and request.endpoint not in ['index', 'login', 'register'] %}
-    <!-- Sidebar for authenticated pages except index -->
+    {% if current_user.is_authenticated and request.endpoint not in ['landing', 'login', 'register'] %}
+    <!-- Sidebar for authenticated pages except landing -->
     <nav id="sidebar">
         <div class="logo-container">
-            <a href="{{ url_for('index') }}" class="logo" aria-label="PureMail"></a>
+            <a href="{{ url_for('landing') }}" class="logo" aria-label="PureMail"></a>
         </div>
         <ul class="nav flex-column">
             <li class="nav-item">
@@ -357,11 +357,11 @@
     {% endif %}
 
     <!-- Main Content -->
-    <main id="content" class="{{ 'with-sidebar' if current_user.is_authenticated and request.endpoint not in ['index', 'login', 'register'] }}">
-        {% if request.endpoint == 'index' %}
+    <main id="content" class="{{ 'with-sidebar' if current_user.is_authenticated and request.endpoint not in ['landing', 'login', 'register'] }}">
+        {% if request.endpoint == 'landing' %}
         <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm mb-4">
             <div class="container">
-                <a class="navbar-brand" href="{{ url_for('index') }}">
+                <a class="navbar-brand" href="{{ url_for('landing') }}">
                     <img src="{{ url_for('static', filename='images/logo.png') }}" alt="PureMail" class="img-fluid" style="max-height: 40px;">
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -405,7 +405,7 @@
     </main>
 
     <!-- Footer -->
-    <footer class="{{ 'with-sidebar' if current_user.is_authenticated and request.endpoint not in ['index', 'login', 'register'] }}">
+    <footer class="{{ 'with-sidebar' if current_user.is_authenticated and request.endpoint not in ['landing', 'login', 'register'] }}">
         <div class="container">
             <p class="mb-0"> 2024 PureMail, A <a href="https://logicwerk.com" target="_blank">Logicwerk</a> Product</p>
         </div>
