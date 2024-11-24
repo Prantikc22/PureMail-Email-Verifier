@@ -798,6 +798,7 @@ def process_file(filepath, user_id):
     try:
         # Read emails from file
         emails = read_emails_from_file(filepath)
+        
         if not emails:
             raise ValueError("No valid emails found in file")
 
@@ -805,8 +806,7 @@ def process_file(filepath, user_id):
         verification = Verification(
             user_id=user_id,
             filename=os.path.basename(filepath),
-            total_emails=len(emails),
-            status='Processing'
+            total_emails=len(emails)
         )
         db.session.add(verification)
         db.session.commit()
@@ -849,39 +849,29 @@ def process_file(filepath, user_id):
         verification.role_based = role_based_count
         
         # Calculate average scores
+        total_emails = len(emails)
         if valid_count > 0:
-            verification.reply_score = round(total_reply_score / valid_count, 2)
-            verification.person_score = round(total_person_score / valid_count, 2)
-            verification.engagement_score = round(total_engagement_score / valid_count, 2)
-            verification.avg_score = round((verification.reply_score + verification.person_score + verification.engagement_score) / 3, 2)
-        else:
-            verification.reply_score = 7.0
-            verification.person_score = 7.0
-            verification.engagement_score = 7.0
-            verification.avg_score = 7.0
-            
-        verification.status = 'Completed'
-        verification.results = json.dumps(results)
-        
-        # Generate Excel report
-        generate_excel_report(verification.id)
-        
+            verification.reply_score = total_reply_score / valid_count
+            verification.person_score = total_person_score / valid_count
+            verification.engagement_score = total_engagement_score / valid_count
+            verification.avg_score = (verification.reply_score + verification.person_score + verification.engagement_score) / 3
+
         db.session.commit()
+
+        # Generate Excel report
+        report_path = generate_excel_report(verification.id)
         
-        # Clean up uploaded file
+        # Clean up
         try:
             os.remove(filepath)
         except:
-            logger.warning(f"Could not remove temporary file: {filepath}")
-
-        return verification
-
+            pass
+            
+        return {'success': True, 'verification_id': verification.id}
+        
     except Exception as e:
-        logger.error(f"Error processing file: {str(e)}\n{traceback.format_exc()}")
-        if 'verification' in locals():
-            verification.status = 'Failed'
-            verification.results = json.dumps({'error': str(e)})
-            db.session.commit()
+        logger.error(f"Error processing file: {str(e)}")
+        logger.error(traceback.format_exc())
         try:
             os.remove(filepath)
         except:
@@ -957,18 +947,18 @@ def verify():
                         'success': True,
                         'message': 'File processed successfully!',
                         'results': {
-                            'id': verification.id,
-                            'total_emails': verification.total_emails,
-                            'valid_emails': verification.valid_emails,
-                            'invalid_format': verification.invalid_format,
-                            'disposable': verification.disposable,
-                            'dns_error': verification.dns_error,
-                            'role_based': verification.role_based,
-                            'avg_score': verification.avg_score,
-                            'reply_score': verification.reply_score,
-                            'person_score': verification.person_score,
-                            'engagement_score': verification.engagement_score,
-                            'download_url': url_for('download_report', verification_id=verification.id)
+                            'id': verification['verification_id'],
+                            'total_emails': verification['verification_id'],
+                            'valid_emails': verification['verification_id'],
+                            'invalid_format': verification['verification_id'],
+                            'disposable': verification['verification_id'],
+                            'dns_error': verification['verification_id'],
+                            'role_based': verification['verification_id'],
+                            'avg_score': verification['verification_id'],
+                            'reply_score': verification['verification_id'],
+                            'person_score': verification['verification_id'],
+                            'engagement_score': verification['verification_id'],
+                            'download_url': url_for('download_report', verification_id=verification['verification_id'])
                         }
                     })
                 else:
