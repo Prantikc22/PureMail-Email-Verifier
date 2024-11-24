@@ -5,7 +5,7 @@ services:
     buildCommand: |
       pip install -r requirements.txt
     startCommand: |
-      python init_db.py
+      python init_db.py || exit 1
       gunicorn -c gunicorn.conf.py app:app
     envVars:
       - key: PYTHON_VERSION
@@ -37,3 +37,4 @@ databases:
   - name: puremail-db
     databaseName: puremail
     user: puremail
+    plan: free
