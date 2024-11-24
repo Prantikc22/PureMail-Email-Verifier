@@ -50,6 +50,10 @@ def get_database_url():
     if not url:
         url = 'sqlite:///test.db'
     
+    # Add SSL mode for PostgreSQL
+    if 'postgresql://' in url:
+        url += '?sslmode=require'
+    
     return url
 
 def init_database():
@@ -65,6 +69,20 @@ def init_database():
             # Configure SQLAlchemy
             app.config['SQLALCHEMY_DATABASE_URI'] = get_database_url()
             app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+            app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+                'pool_size': 5,
+                'max_overflow': 10,
+                'pool_timeout': 30,
+                'pool_recycle': 1800,
+                'pool_pre_ping': True,
+                'connect_args': {
+                    'sslmode': 'require',
+                    'keepalives': 1,
+                    'keepalives_idle': 30,
+                    'keepalives_interval': 10,
+                    'keepalives_count': 5
+                }
+            }
             
             # Initialize database
             db.init_app(app)
