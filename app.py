@@ -413,10 +413,10 @@ def generate_excel_report(verification_id):
     # Add scores section
     ws.append(['', ''])  # Empty row
     ws.append(['Scores', ''])
-    ws.append(['Average Score', f"{verification.avg_score:.2f}"])
-    ws.append(['Reply Score', f"{verification.reply_score:.2f}"])
-    ws.append(['Person Score', f"{verification.person_score:.2f}"])
-    ws.append(['Engagement Score', f"{verification.engagement_score:.2f}"])
+    ws.append(['Average Score', f"{verification.avg_score:.2f}" if verification.avg_score else "N/A"])
+    ws.append(['Reply Score', f"{verification.reply_score:.2f}" if verification.reply_score else "N/A"])
+    ws.append(['Person Score', f"{verification.person_score:.2f}" if verification.person_score else "N/A"])
+    ws.append(['Engagement Score', f"{verification.engagement_score:.2f}" if verification.engagement_score else "N/A"])
 
     # Style the cells
     for row in ws.iter_rows(min_row=2, max_row=ws.max_row, max_col=2):
