@@ -68,8 +68,11 @@
                             <a href="{{ url_for('dashboard') }}" class="btn btn-light btn-lg">Go to Dashboard</a>
                             <a href="{{ url_for('verify_email') }}" class="btn btn-outline-light btn-lg">Start Verifying</a>
                         {% else %}
-                            <a href="{{ url_for('register') }}" class="btn btn-light btn-lg">Get Started</a>
-                            <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-lg">Login</a>
+                            <div class="text-center mt-4">
+                                <button type="button" class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#appsumoModal">
+                                    Get Started
+                                </button>
+                            </div>
                         {% endif %}
                     </div>
                 </div>
@@ -279,7 +282,11 @@
                             {% if current_user.is_authenticated %}
                                 <a href="{{ url_for('dashboard') }}" class="btn btn-primary w-100">Access Dashboard</a>
                             {% else %}
-                                <a href="{{ url_for('register') }}" class="btn btn-primary w-100">Get Started</a>
+                                <div class="text-center mt-4">
+                                    <button type="button" class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#appsumoModal">
+                                        Get Started
+                                    </button>
+                                </div>
                             {% endif %}
                         </div>
                     </div>
@@ -309,7 +316,11 @@
                             {% if current_user.is_authenticated %}
                                 <a href="{{ url_for('dashboard') }}" class="btn btn-primary w-100">Access Dashboard</a>
                             {% else %}
-                                <a href="{{ url_for('register') }}" class="btn btn-primary w-100">Get Started</a>
+                                <div class="text-center mt-4">
+                                    <button type="button" class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#appsumoModal">
+                                        Get Started
+                                    </button>
+                                </div>
                             {% endif %}
                         </div>
                     </div>
@@ -340,7 +351,11 @@
                             {% if current_user.is_authenticated %}
                                 <a href="{{ url_for('dashboard') }}" class="btn btn-primary w-100">Access Dashboard</a>
                             {% else %}
-                                <a href="{{ url_for('register') }}" class="btn btn-primary w-100">Get Started</a>
+                                <div class="text-center mt-4">
+                                    <button type="button" class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#appsumoModal">
+                                        Get Started
+                                    </button>
+                                </div>
                             {% endif %}
                         </div>
                     </div>
@@ -359,7 +374,11 @@
                                 <h2 class="display-4 fw-bold mb-4">Ready to Improve Your<br>Email Marketing?</h2>
                                 <p class="lead text-muted mb-5">Experience the power of AI-driven email verification with 99.9% accuracy</p>
                                 <div class="cta-buttons d-flex justify-content-center gap-4">
-                                    <a href="#pricing" class="btn btn-primary btn-lg px-5 py-3">Get Started</a>
+                                    <div class="text-center mt-4">
+                                        <button type="button" class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#appsumoModal">
+                                            Get Started
+                                        </button>
+                                    </div>
                                     <a href="https://logicwerk.com/contact-us" class="btn btn-outline-primary btn-lg px-5 py-3" target="_blank">Contact Sales</a>
                                 </div>
                             </div>
@@ -369,6 +388,30 @@
             </div>
         </div>
     </section>
+
+    <!-- AppSumo Modal -->
+    <div class="modal fade" id="appsumoModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center px-4 py-4">
+                    <span class="badge bg-warning text-dark px-4 py-2 mb-3">APPSUMO EXCLUSIVE</span>
+                    <h3 class="mb-4">🎉 Special Offer Alert!</h3>
+                    <p class="mb-4">PureMail is currently available exclusively through AppSumo. Get lifetime access at an incredible price!</p>
+                    <div class="d-grid gap-3">
+                        <a href="https://appsumo.com/products/puremail" target="_blank" class="btn btn-warning btn-lg">
+                            <i class="fas fa-shopping-cart me-2"></i>Purchase on AppSumo
+                        </a>
+                        <a href="{{ url_for('appsumo_landing') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-ticket-alt me-2"></i>Redeem AppSumo Code
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Testimonials Section -->
     <section class="testimonials-section py-5" id="testimonials">
