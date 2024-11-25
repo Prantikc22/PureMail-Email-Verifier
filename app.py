@@ -42,27 +42,33 @@ app = Flask(__name__)
 # Configure app
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
 
-# Configure database URL with SSL mode
-database_url = os.environ.get('DATABASE_URL', 'sqlite:///email_verifier.db')
-if database_url.startswith('postgres://'):
-    database_url = database_url.replace('postgres://', 'postgresql://', 1)
-
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+# Configure SQLAlchemy
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Update database connection parameters for SSL
+if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgres://'):
+    app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_URI'].replace('postgres://', 'postgresql://', 1)
+
+# Configure database connection parameters
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_size': 5,
-    'max_overflow': 10,
-    'pool_timeout': 30,
-    'pool_recycle': 1800,
     'connect_args': {
-        'sslmode': 'require',
-        'connect_timeout': 30,
-        'keepalives': 1,
-        'keepalives_idle': 30,
-        'keepalives_interval': 10,
-        'keepalives_count': 5
-    }
+        'sslmode': os.getenv('POSTGRES_SSLMODE', 'require'),
+        'connect_timeout': int(os.getenv('POSTGRES_CONNECT_TIMEOUT', 30)),
+        'keepalives': int(os.getenv('POSTGRES_KEEPALIVES', 1)),
+        'keepalives_idle': int(os.getenv('POSTGRES_KEEPALIVES_IDLE', 30)),
+        'keepalives_interval': int(os.getenv('POSTGRES_KEEPALIVES_INTERVAL', 10)),
+        'keepalives_count': int(os.getenv('POSTGRES_KEEPALIVES_COUNT', 5))
+    },
+    'pool_pre_ping': True,
+    'pool_recycle': 300,
+    'pool_timeout': 30,
+    'pool_size': 10,
+    'max_overflow': 5
 }
+
+# Initialize extensions
+db.init_app(app)
 
 # Configure upload folder
 app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', 'uploads')
@@ -70,7 +76,7 @@ if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
 # Import and initialize extensions
-from extensions import db, migrate, login_manager, init_extensions
+from extensions import migrate, login_manager, init_extensions
 init_extensions(app)
 
 # Import models after extensions initialization
