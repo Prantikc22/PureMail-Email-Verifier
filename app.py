@@ -691,39 +691,148 @@ def process_file(filepath, user_id):
         # Create Excel workbook
         wb = Workbook()
         ws = wb.active
-        ws.title = "Verification Results"
+        ws.title = "Email Verification Results"
 
         # Set column widths
-        columns = {'A': 40, 'B': 15, 'C': 15, 'D': 15, 'E': 20, 'F': 20}
-        for col, width in columns.items():
+        column_widths = {
+            'A': 40,  # Email Address
+            'B': 15,  # Reply Score
+            'C': 15,  # Person Score
+            'D': 15,  # Engagement Score
+            'E': 15,  # Overall Rating
+            'F': 20,  # Industry Type
+            'G': 15,  # Business Email
+            'H': 20,  # Email Pattern
+            'I': 15   # Domain Reputation
+        }
+        for col, width in column_widths.items():
             ws.column_dimensions[col].width = width
 
-        # Style for headers
-        header_style = NamedStyle(name='header_style')
-        header_style.font = Font(bold=True)
-        header_style.fill = PatternFill("solid", fgColor="CCCCCC")
-        header_style.alignment = Alignment(horizontal='center', wrap_text=True)
+        # Add title
+        ws.merge_cells('A1:I1')
+        title_cell = ws['A1']
+        title_cell.value = "Email Verification Results"
+        title_cell.font = Font(bold=True, size=14)
+        title_cell.alignment = Alignment(horizontal='center')
+        ws.row_dimensions[1].height = 30
 
         # Add headers
-        headers = ['Email Address', 'Valid', 'Score', 'Type', 'Industry', 'Pattern']
+        headers = [
+            'Email Address',
+            'Reply Likelihood\nScore (1-10)',
+            'Real Person\nScore (1-10)',
+            'Engagement\nScore (1-10)',
+            'Overall Rating',
+            'Industry Type',
+            'Business Email',
+            'Email Pattern',
+            'Domain\nReputation'
+        ]
+        
         for col, header in enumerate(headers, 1):
-            cell = ws.cell(row=1, column=col, value=header)
-            cell.style = header_style
+            cell = ws.cell(row=3, column=col, value=header)
+            cell.font = Font(bold=True, color='FFFFFF')
+            cell.fill = PatternFill("solid", fgColor="4472C4")
+            cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+            cell.border = Border(
+                left=Side(style='thin'),
+                right=Side(style='thin'),
+                top=Side(style='thin'),
+                bottom=Side(style='thin')
+            )
 
         # Add data rows
-        for row, email_data in enumerate(valid_emails, 2):
-            score = round((email_data['reply_score'] + email_data['person_score'] + email_data['engagement_score']) / 3, 1)
-            
-            ws.cell(row=row, column=1, value=email_data['email'])
-            ws.cell(row=row, column=2, value='Yes')
-            ws.cell(row=row, column=3, value=score)
-            ws.cell(row=row, column=4, value='Business' if email_data['is_business'] else 'Personal')
-            ws.cell(row=row, column=5, value=email_data['industry'])
-            ws.cell(row=row, column=6, value=email_data['pattern'])
+        high_score_count = 0
+        medium_score_count = 0
+        low_score_count = 0
 
-            # Center align all cells in the row
-            for col in range(1, 7):
-                ws.cell(row=row, column=col).alignment = Alignment(horizontal='center')
+        for row_idx, email_data in enumerate(valid_emails, 4):
+            # Calculate overall rating based on average score
+            avg_score = round((email_data['reply_score'] + email_data['person_score'] + email_data['engagement_score']) / 3, 1)
+            if avg_score >= 8:
+                rating = "High"
+                high_score_count += 1
+            elif avg_score >= 5:
+                rating = "Medium"
+                medium_score_count += 1
+            else:
+                rating = "Low"
+                low_score_count += 1
+
+            # Determine email pattern
+            email = email_data['email']
+            if '@' in email:
+                local_part = email.split('@')[0]
+                if '.' in local_part:
+                    pattern = "Name Format"
+                else:
+                    pattern = "Other"
+            else:
+                pattern = "Invalid"
+
+            # Calculate domain reputation
+            domain_reputation = round((email_data['reply_score'] + email_data['person_score']) / 2, 1)
+
+            # Write data
+            row_data = [
+                email_data['email'],
+                round(email_data['reply_score'], 1),
+                round(email_data['person_score'], 1),
+                round(email_data['engagement_score'], 1),
+                rating,
+                'Business' if email_data['is_business'] else 'Personal',
+                'Yes' if email_data['is_business'] else 'No',
+                pattern,
+                domain_reputation
+            ]
+
+            for col, value in enumerate(row_data, 1):
+                cell = ws.cell(row=row_idx, column=col, value=value)
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+                cell.border = Border(
+                    left=Side(style='thin'),
+                    right=Side(style='thin'),
+                    top=Side(style='thin'),
+                    bottom=Side(style='thin')
+                )
+
+        # Add score distribution
+        distribution_start_row = len(valid_emails) + 6
+        ws.merge_cells(f'A{distribution_start_row}:I{distribution_start_row}')
+        ws[f'A{distribution_start_row}'].value = "Score Distribution"
+        ws[f'A{distribution_start_row}'].font = Font(bold=True)
+        ws[f'A{distribution_start_row}'].alignment = Alignment(horizontal='center')
+
+        distribution_data = [
+            f"High Scoring Emails (8-10): {high_score_count}",
+            f"Medium Scoring Emails (5-7): {medium_score_count}",
+            f"Low Scoring Emails (1-4): {low_score_count}"
+        ]
+
+        for idx, text in enumerate(distribution_data):
+            row = distribution_start_row + idx + 1
+            ws.merge_cells(f'A{row}:I{row}')
+            ws[f'A{row}'].value = text
+            ws[f'A{row}'].alignment = Alignment(horizontal='center')
+
+        # Add score guide
+        guide_start_row = distribution_start_row + len(distribution_data) + 2
+        ws.merge_cells(f'A{guide_start_row}:I{guide_start_row}')
+        ws[f'A{guide_start_row}'].value = "Score Guide"
+        ws[f'A{guide_start_row}'].font = Font(bold=True)
+        ws[f'A{guide_start_row}'].alignment = Alignment(horizontal='center')
+
+        guide_data = [
+            "High (8-10): Excellent engagement potential, highly likely to be active and responsive",
+            "Medium (5-7): Good engagement potential, moderately active email users",
+            "Low (1-4): Limited engagement potential, may be inactive or less responsive"
+        ]
+
+        for idx, text in enumerate(guide_data):
+            row = guide_start_row + idx + 1
+            ws.merge_cells(f'A{row}:I{row}')
+            ws[f'A{row}'].value = text
+            ws[f'A{row}'].alignment = Alignment(horizontal='left')
 
         # Save workbook
         wb.save(report_path)
