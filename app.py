@@ -17,7 +17,7 @@ import secrets
 import string
 from email_validator import validate_email, EmailNotValidError
 from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 import xlsxwriter
 import uuid
@@ -389,241 +389,59 @@ def generate_excel_report(verification_id):
     if not verification:
         return None
 
-    results = json.loads(verification.results) if verification.results else {}
-    
-    # Create output buffer
-    output = io.BytesIO()
-    
-    # Create a new workbook and select the active worksheet
-    workbook = xlsxwriter.Workbook(output)
-    worksheet = workbook.add_worksheet('Verification Results')
-    
-    # Define formats
-    header_format = workbook.add_format({
-        'bold': True,
-        'font_size': 11,
-        'bg_color': '#1a237e',
-        'font_color': 'white',
-        'border': 1,
-        'align': 'center',
-        'valign': 'vcenter',
-        'text_wrap': True
-    })
-    
-    cell_format = workbook.add_format({
-        'font_size': 10,
-        'border': 1,
-        'align': 'center',
-        'valign': 'vcenter'
-    })
-    
-    title_format = workbook.add_format({
-        'bold': True,
-        'font_size': 14,
-        'font_color': '#1a237e',
-        'align': 'center',
-        'valign': 'vcenter'
-    })
-    
-    subtitle_format = workbook.add_format({
-        'bold': True,
-        'font_size': 11,
-        'bg_color': '#e8eaf6',
-        'align': 'left',
-        'valign': 'vcenter'
-    })
+    # Create a new Excel workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Verification Results"
 
-    # Score formats
-    high_score_format = workbook.add_format({
-        'font_size': 10,
-        'border': 1,
-        'align': 'center',
-        'valign': 'vcenter',
-        'bg_color': '#c8e6c9',  # Light green
-        'num_format': '0.0'
-    })
+    # Add title
+    ws.merge_cells('A1:B1')
+    title_cell = ws['A1']
+    title_cell.value = "Email Verification Report"
+    title_cell.font = Font(size=14, bold=True)
+    title_cell.alignment = Alignment(horizontal='center')
 
-    medium_score_format = workbook.add_format({
-        'font_size': 10,
-        'border': 1,
-        'align': 'center',
-        'valign': 'vcenter',
-        'bg_color': '#fff3e0',  # Light orange
-        'num_format': '0.0'
-    })
+    # Add summary section
+    ws.append(['Summary', ''])
+    ws.append(['Total Emails', verification.total_emails])
+    ws.append(['Valid Emails', verification.valid_emails])
+    ws.append(['Invalid Format', verification.invalid_format])
+    ws.append(['Disposable', verification.disposable])
+    ws.append(['DNS Error', verification.dns_error])
+    ws.append(['Role Based', verification.role_based])
+    
+    # Add scores section
+    ws.append(['', ''])  # Empty row
+    ws.append(['Scores', ''])
+    ws.append(['Average Score', f"{verification.avg_score:.2f}"])
+    ws.append(['Reply Score', f"{verification.reply_score:.2f}"])
+    ws.append(['Person Score', f"{verification.person_score:.2f}"])
+    ws.append(['Engagement Score', f"{verification.engagement_score:.2f}"])
 
-    low_score_format = workbook.add_format({
-        'font_size': 10,
-        'border': 1,
-        'align': 'center',
-        'valign': 'vcenter',
-        'bg_color': '#ffebee',  # Light red
-        'num_format': '0.0'
-    })
+    # Style the cells
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row, max_col=2):
+        for cell in row:
+            cell.border = Border(
+                left=Side(style='thin'),
+                right=Side(style='thin'),
+                top=Side(style='thin'),
+                bottom=Side(style='thin')
+            )
+            if cell.column == 1:  # First column
+                cell.font = Font(bold=True)
+                cell.fill = PatternFill(start_color="E0E0E0", end_color="E0E0E0", fill_type="solid")
 
-    # Rating formats
-    high_rating_format = workbook.add_format({
-        'font_size': 10,
-        'border': 1,
-        'align': 'center',
-        'valign': 'vcenter',
-        'bg_color': '#c8e6c9',  # Light green
-        'bold': True
-    })
+    # Adjust column widths
+    ws.column_dimensions['A'].width = 20
+    ws.column_dimensions['B'].width = 15
 
-    medium_rating_format = workbook.add_format({
-        'font_size': 10,
-        'border': 1,
-        'align': 'center',
-        'valign': 'vcenter',
-        'bg_color': '#fff3e0',  # Light orange
-        'bold': True
-    })
+    # Save the workbook
+    report_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'reports')
+    os.makedirs(report_dir, exist_ok=True)
+    report_path = os.path.join(report_dir, f'verification_report_{verification_id}.xlsx')
+    wb.save(report_path)
 
-    low_rating_format = workbook.add_format({
-        'font_size': 10,
-        'border': 1,
-        'align': 'center',
-        'valign': 'vcenter',
-        'bg_color': '#ffebee',  # Light red
-        'bold': True
-    })
-
-    # Write title
-    worksheet.merge_range('A1:I1', 'Email Verification Results', title_format)
-    worksheet.set_row(0, 30)  # Set row height for title
-    
-    # Headers
-    headers = [
-        'Email Address',
-        'Reply Likelihood\nScore (1-10)',
-        'Real Person\nScore (1-10)',
-        'Engagement\nScore (1-10)',
-        'Overall Rating',
-        'Industry Type',
-        'Business Email',
-        'Email Pattern',
-        'Domain\nReputation'
-    ]
-    
-    # Write headers
-    for col, header in enumerate(headers):
-        worksheet.write(2, col, header, header_format)
-    
-    # Write data
-    row = 3
-    high_scores = 0
-    medium_scores = 0
-    low_scores = 0
-    
-    for email, result in results.items():
-        # Only show valid emails
-        if not result.get('valid', False):
-            continue
-            
-        # Get scores from the result
-        reply_score = float(result.get('reply_score', 7.0))
-        person_score = float(result.get('person_score', 7.0))
-        engagement_score = float(result.get('engagement_score', 7.0))
-        
-        # Calculate average score
-        avg_score = (reply_score + person_score + engagement_score) / 3
-        
-        # Count scores for distribution
-        if avg_score >= 8:
-            high_scores += 1
-        elif avg_score >= 5:
-            medium_scores += 1
-        else:
-            low_scores += 1
-            
-        # Determine overall rating
-        if avg_score >= 8:
-            rating = 'High'
-            rating_format = high_rating_format
-        elif avg_score >= 5:
-            rating = 'Medium'
-            rating_format = medium_rating_format
-        else:
-            rating = 'Low'
-            rating_format = low_rating_format
-            
-        # Determine industry type and business email
-        domain = email.split('@')[1]
-        is_business = not any(personal in domain for personal in ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com'])
-        industry = 'Business' if is_business else 'Personal'
-        
-        # Determine email pattern
-        email_local = email.split('@')[0]
-        if '.' in email_local or '-' in email_local:
-            pattern = 'Name Format'
-        else:
-            pattern = 'Other'
-            
-        # Calculate domain reputation
-        domain_rep = min(max(avg_score + random.uniform(-1, 1), 1), 10)
-        
-        # Write data with appropriate formats
-        worksheet.write(row, 0, email, cell_format)
-        
-        # Write scores with color formatting
-        def get_score_format(score):
-            if score >= 8:
-                return high_score_format
-            elif score >= 5:
-                return medium_score_format
-            return low_score_format
-        
-        worksheet.write(row, 1, reply_score, get_score_format(reply_score))
-        worksheet.write(row, 2, person_score, get_score_format(person_score))
-        worksheet.write(row, 3, engagement_score, get_score_format(engagement_score))
-        worksheet.write(row, 4, rating, rating_format)
-        worksheet.write(row, 5, industry, cell_format)
-        worksheet.write(row, 6, 'Yes' if is_business else 'No', cell_format)
-        worksheet.write(row, 7, pattern, cell_format)
-        worksheet.write(row, 8, domain_rep, get_score_format(domain_rep))
-        row += 1
-    
-    # Add empty row
-    row += 2
-    
-    # Write Score Distribution
-    worksheet.merge_range(f'A{row}:I{row}', 'Score Distribution', subtitle_format)
-    row += 1
-    worksheet.merge_range(f'A{row}:I{row}', f'High Scoring Emails (8-10): {high_scores}', high_score_format)
-    row += 1
-    worksheet.merge_range(f'A{row}:I{row}', f'Medium Scoring Emails (5-7): {medium_scores}', medium_score_format)
-    row += 1
-    worksheet.merge_range(f'A{row}:I{row}', f'Low Scoring Emails (1-4): {low_scores}', low_score_format)
-    
-    # Add empty row
-    row += 2
-    
-    # Write Score Guide
-    worksheet.merge_range(f'A{row}:I{row}', 'Score Guide', subtitle_format)
-    row += 1
-    worksheet.merge_range(f'A{row}:I{row}', 'High (8-10): Excellent engagement potential, highly likely to be active and responsive', high_score_format)
-    row += 1
-    worksheet.merge_range(f'A{row}:I{row}', 'Medium (5-7): Good engagement potential, moderately active email users', medium_score_format)
-    row += 1
-    worksheet.merge_range(f'A{row}:I{row}', 'Low (1-4): Limited engagement potential, may be inactive or less responsive', low_score_format)
-    
-    # Set column widths
-    worksheet.set_column('A:A', 40)  # Email Address
-    worksheet.set_column('B:D', 15)  # Scores
-    worksheet.set_column('E:E', 15)  # Rating
-    worksheet.set_column('F:F', 15)  # Industry
-    worksheet.set_column('G:G', 15)  # Business Email
-    worksheet.set_column('H:H', 15)  # Pattern
-    worksheet.set_column('I:I', 15)  # Domain Reputation
-    
-    # Close the workbook to write to the buffer
-    workbook.close()
-    
-    # Reset buffer position
-    output.seek(0)
-    
-    return output
+    return report_path
 
 def verify_email(email):
     """Verify a single email address with comprehensive checks."""
@@ -1169,27 +987,26 @@ def logout():
 def download_report(verification_id):
     verification = Verification.query.get_or_404(verification_id)
     
-    # Check if the verification belongs to the current user
+    # Check if user owns this verification
     if verification.user_id != current_user.id:
-        abort(403)  # Forbidden
+        abort(403)
     
-    # Generate the report
     report_path = generate_excel_report(verification_id)
-    
     if not report_path:
         flash('Error generating report', 'error')
-        return redirect(url_for('history'))
+        return redirect(url_for('dashboard'))
     
     try:
         return send_file(
             report_path,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             as_attachment=True,
-            download_name=f'email_verification_report_{verification_id}.xlsx'
+            download_name=f'verification_report_{verification_id}.xlsx'
         )
     except Exception as e:
-        logger.error(f"Error sending file: {e}")
+        app.logger.error(f"Error sending file: {e}")
         flash('Error downloading report', 'error')
-        return redirect(url_for('history'))
+        return redirect(url_for('dashboard'))
 
 @app.route('/contact')
 def contact():

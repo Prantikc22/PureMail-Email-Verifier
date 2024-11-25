@@ -13,23 +13,23 @@
                     <thead>
                         <tr>
                             <th>Date</th>
+                            <th>Filename</th>
                             <th>Total Emails</th>
                             <th>Valid</th>
-                            <th>Invalid</th>
-                            <th>Average Score</th>
+                            <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for verification in verifications %}
                         <tr>
-                            <td>{{ verification.date.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            <td>{{ verification.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            <td>{{ verification.filename }}</td>
                             <td>{{ verification.total_emails }}</td>
-                            <td class="text-success">{{ verification.valid_emails }}</td>
-                            <td class="text-danger">{{ verification.total_emails - verification.valid_emails }}</td>
-                            <td>{{ "%.2f"|format(verification.avg_score or 0) }}</td>
+                            <td>{{ verification.valid_emails }}</td>
+                            <td>{{ verification.status }}</td>
                             <td>
-                                <a href="{{ url_for('download_report', verification_id=verification.id) }}" class="btn btn-primary btn-sm">
+                                <a href="{{ url_for('download_report', verification_id=verification.id) }}" class="btn btn-sm btn-primary">
                                     <i class="fas fa-download me-1"></i> Download Report
                                 </a>
                             </td>
