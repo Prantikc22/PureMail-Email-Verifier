@@ -918,35 +918,20 @@ def landing():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    # Get user's verification statistics
-    total_verifications = Verification.query.filter_by(user_id=current_user.id).count()
-    valid_emails = sum([v.valid_emails for v in Verification.query.filter_by(user_id=current_user.id).all()])
+    form = FileUploadForm()  # Initialize the form
+    verifications = Verification.query.filter_by(user_id=current_user.id).order_by(Verification.created_at.desc()).all()
     
-    # Count all types of invalid emails
-    verifications = Verification.query.filter_by(user_id=current_user.id).all()
-    invalid_emails = sum([
-        v.invalid_format + v.disposable + v.dns_error + v.role_based 
-        for v in verifications
-    ])
-    
-    stats = {
-        'total_verifications': total_verifications,
-        'valid_emails': valid_emails,
-        'invalid_emails': invalid_emails
-    }
-    
-    # Get AppSumo code statistics if user is admin
     total_codes = 0
     active_codes = 0
     redeemed_codes = 0
-    
-    if current_user.id == 1:  # Admin user
+    if current_user.id == 1:
         total_codes = AppSumoCode.query.count()
-        active_codes = AppSumoCode.query.filter_by(status='active').count()
-        redeemed_codes = AppSumoCode.query.filter_by(status='redeemed').count()
+        active_codes = AppSumoCode.query.filter_by(is_redeemed=False).count()
+        redeemed_codes = AppSumoCode.query.filter_by(is_redeemed=True).count()
     
-    return render_template('dashboard.html', 
-                         stats=stats,
+    return render_template('dashboard.html',
+                         verifications=verifications,
+                         form=form,
                          total_codes=total_codes,
                          active_codes=active_codes,
                          redeemed_codes=redeemed_codes)
