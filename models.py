@@ -26,7 +26,7 @@ class Verification(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     filename = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    status = db.Column(db.String(20), default='pending')  # pending, processing, completed, failed
+    status = db.Column(db.String(50), default='Processing')
     total_emails = db.Column(db.Integer, default=0)
     valid_emails = db.Column(db.Integer, default=0)
     invalid_format = db.Column(db.Integer, default=0)
@@ -37,8 +37,7 @@ class Verification(db.Model):
     reply_score = db.Column(db.Float, default=0.0)
     person_score = db.Column(db.Float, default=0.0)
     engagement_score = db.Column(db.Float, default=0.0)
-    results = db.Column(db.Text)  # Store JSON results
-    
+
     # Relationships
     catch_all_scores = db.relationship('CatchAllScore', backref='verification', lazy=True)
 
