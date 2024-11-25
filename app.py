@@ -943,10 +943,10 @@ def dashboard():
     total_codes = 0
     active_codes = 0
     redeemed_codes = 0
-    if current_user.id == 1:
+    if current_user.id == 1:  # Admin user
         total_codes = AppSumoCode.query.count()
-        active_codes = AppSumoCode.query.filter_by(is_redeemed=False).count()
-        redeemed_codes = AppSumoCode.query.filter_by(is_redeemed=True).count()
+        active_codes = AppSumoCode.query.filter_by(status='active').count()
+        redeemed_codes = AppSumoCode.query.filter_by(status='redeemed').count()
     
     return render_template('dashboard.html',
                          verifications=verifications,

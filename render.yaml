@@ -12,7 +12,6 @@ services:
           try:
               db.session.execute('ALTER TABLE verifications ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
               db.session.execute('ALTER TABLE verifications ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT \'pending\'');
-              db.session.execute('ALTER TABLE appsumo_codes ADD COLUMN IF NOT EXISTS is_redeemed BOOLEAN DEFAULT FALSE');
               db.session.commit()
           except:
               db.session.rollback()
