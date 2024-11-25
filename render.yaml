@@ -2,8 +2,10 @@ services:
   - type: web
     name: puremail
     env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --timeout 120 --workers 4 --threads 2
+    buildCommand: |
+      pip install -r requirements.txt
+      python -c "from app import db; db.create_all()"
+    startCommand: gunicorn app:app --timeout 180 --workers 4 --threads 2 --max-requests 1000 --max-requests-jitter 50
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
@@ -15,6 +17,8 @@ services:
         value: app.py
       - key: FLASK_ENV
         value: production
+      - key: SECRET_KEY
+        generateValue: true
       - key: UPLOAD_FOLDER
         value: /opt/render/project/src/uploads
       - key: MAX_CONTENT_LENGTH
@@ -27,8 +31,12 @@ services:
         value: require
     healthCheckPath: /
     autoDeploy: false
+    disk:
+      name: uploads
+      mountPath: /opt/render/project/src/uploads
+      sizeGB: 1
 
 databases:
   - name: puremail-db
-    plan: free
+    plan: starter
     ipAllowList: []
