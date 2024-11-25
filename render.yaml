@@ -27,10 +27,18 @@ services:
         value: 10485760
       - key: SQLALCHEMY_TRACK_MODIFICATIONS
         value: "False"
-      - key: SSL_MODE
-        value: require
       - key: POSTGRES_SSLMODE
         value: require
+      - key: POSTGRES_CONNECT_TIMEOUT
+        value: "30"
+      - key: POSTGRES_KEEPALIVES
+        value: "1"
+      - key: POSTGRES_KEEPALIVES_IDLE
+        value: "30"
+      - key: POSTGRES_KEEPALIVES_INTERVAL
+        value: "10"
+      - key: POSTGRES_KEEPALIVES_COUNT
+        value: "5"
       - key: PYTHONPATH
         value: /opt/render/project/src
     healthCheckPath: /
@@ -44,3 +52,4 @@ databases:
   - name: puremail-db
     plan: starter
     ipAllowList: []
+    postgresMajorVersion: 15

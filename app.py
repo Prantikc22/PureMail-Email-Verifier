@@ -45,8 +45,6 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
 database_url = os.environ.get('DATABASE_URL', 'sqlite:///email_verifier.db')
 if database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
-if 'postgresql://' in database_url:
-    database_url += '?sslmode=require'
 
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -55,6 +53,14 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'max_overflow': 10,
     'pool_timeout': 30,
     'pool_recycle': 1800,
+    'connect_args': {
+        'sslmode': 'require',
+        'connect_timeout': 30,
+        'keepalives': 1,
+        'keepalives_idle': 30,
+        'keepalives_interval': 10,
+        'keepalives_count': 5
+    }
 }
 
 # Configure upload folder
@@ -79,33 +85,51 @@ def load_user(user_id):
 
 def init_database():
     """Initialize database and create admin user if not exists"""
-    try:
-        # Create all tables
-        db.create_all()
-        logger.info("Database tables created successfully")
-        
-        # Create admin user if not exists
-        admin = User.query.filter_by(email='admin@puremail.com').first()
-        if not admin:
-            admin = User(
-                username='admin',
-                email='admin@puremail.com',
-                is_admin=True,
-                credits=9999999
-            )
-            admin.set_password('admin123')
-            db.session.add(admin)
-            db.session.commit()
-            logger.info("Admin user created successfully")
-        else:
-            logger.info("Admin user already exists")
-        
-        logger.info("Database initialization completed successfully")
-        
-    except Exception as e:
-        logger.error(f"Error during database initialization: {str(e)}")
-        logger.error(traceback.format_exc())
-        raise
+    max_retries = 5
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            logger.info(f"Database initialization attempt {attempt + 1}/{max_retries}")
+            
+            # Test database connection
+            with db.engine.connect() as conn:
+                conn.execute("SELECT 1")
+            logger.info("Database connection successful")
+            
+            # Create all tables
+            db.create_all()
+            logger.info("Database tables created successfully")
+            
+            # Create admin user if not exists
+            admin = User.query.filter_by(email='admin@puremail.com').first()
+            if not admin:
+                admin = User(
+                    username='admin',
+                    email='admin@puremail.com',
+                    is_admin=True,
+                    credits=9999999
+                )
+                admin.set_password('admin123')
+                db.session.add(admin)
+                db.session.commit()
+                logger.info("Admin user created successfully")
+            else:
+                logger.info("Admin user already exists")
+            
+            logger.info("Database initialization completed successfully")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Database initialization attempt {attempt + 1} failed: {str(e)}")
+            logger.error(traceback.format_exc())
+            if attempt < max_retries - 1:
+                logger.info(f"Retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+                retry_delay *= 2  # Exponential backoff
+            else:
+                logger.error("All database initialization attempts failed")
+                raise
 
 # Initialize database with app context
 with app.app_context():
@@ -113,6 +137,7 @@ with app.app_context():
         init_database()
     except Exception as e:
         logger.error(f"Failed to initialize database: {str(e)}")
+        logger.error(traceback.format_exc())
 
 # Enhanced validation constants
 HONEYPOT_PATTERNS = {
