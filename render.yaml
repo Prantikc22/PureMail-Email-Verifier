@@ -4,8 +4,8 @@ services:
     env: python
     buildCommand: |
       pip install -r requirements.txt
-      python -c "from app import db; db.create_all()"
-    startCommand: gunicorn app:app --timeout 180 --workers 4 --threads 2 --max-requests 1000 --max-requests-jitter 50
+      python -c "from app import app; from extensions import db; with app.app_context(): db.create_all()"
+    startCommand: gunicorn app:app --timeout 180 --workers 4 --threads 2 --max-requests 1000 --max-requests-jitter 50 --preload
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0

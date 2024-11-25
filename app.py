@@ -1,10 +1,8 @@
+# Import all required packages
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, abort
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.urls import url_parse
-from flask_migrate import Migrate
 from werkzeug.utils import secure_filename
 import os
 import logging
@@ -63,13 +61,11 @@ app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', 'uploads')
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
-# Initialize extensions
-db = SQLAlchemy(app)
-migrate = Migrate(app, db)
-login_manager = LoginManager(app)
-login_manager.login_view = 'login'
+# Import and initialize extensions
+from extensions import db, migrate, login_manager, init_extensions
+init_extensions(app)
 
-# Import models after db initialization
+# Import models after extensions initialization
 from models import User, Verification, DMARCRecord, BlacklistMonitor, BlacklistEntry, CatchAllScore, AppSumoCode
 
 @login_manager.user_loader
