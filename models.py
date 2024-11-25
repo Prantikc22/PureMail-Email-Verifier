@@ -25,7 +25,8 @@ class Verification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     filename = db.Column(db.String(255), nullable=False)
-    date = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(20), default='pending')  # pending, processing, completed, failed
     total_emails = db.Column(db.Integer, default=0)
     valid_emails = db.Column(db.Integer, default=0)
     invalid_format = db.Column(db.Integer, default=0)

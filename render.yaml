@@ -4,7 +4,18 @@ services:
     env: python
     buildCommand: |
       pip install -r requirements.txt
-      python -c "from app import app; from extensions import db; with app.app_context(): db.create_all()"
+      python -c "
+      from app import app, db;
+      from models import *;
+      with app.app_context():
+          db.create_all();
+          try:
+              db.session.execute('ALTER TABLE verifications ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+              db.session.execute('ALTER TABLE verifications ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT \'pending\'');
+              db.session.commit()
+          except:
+              db.session.rollback()
+      "
     startCommand: |
       export PYTHONPATH=/opt/render/project/src:$PYTHONPATH
       gunicorn --preload --workers 4 --threads 2 --timeout 180 --max-requests 1000 --max-requests-jitter 50 'app:app'

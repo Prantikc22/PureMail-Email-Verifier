@@ -60,7 +60,7 @@
                                     <td>{{ verification.status }}</td>
                                     <td>{{ verification.total_emails }}</td>
                                     <td>
-                                        <a href="{{ url_for('download_results', verification_id=verification.id) }}" 
+                                        <a href="{{ url_for('download_report', verification_id=verification.id) }}" 
                                            class="btn btn-sm btn-primary">
                                             Download Results
                                         </a>

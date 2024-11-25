@@ -46,23 +46,28 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
 
 # Configure SQLAlchemy
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+database_url = os.getenv('DATABASE_URL')
+if database_url and database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
 
-# Update database connection parameters for SSL
-if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgres://'):
-    app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_URI'].replace('postgres://', 'postgresql://', 1)
+# Add query parameters to URL
+url_params = []
+if os.getenv('POSTGRES_SSLMODE'):
+    url_params.append(f"sslmode={os.getenv('POSTGRES_SSLMODE')}")
+if os.getenv('POSTGRES_CONNECT_TIMEOUT'):
+    url_params.append(f"connect_timeout={os.getenv('POSTGRES_CONNECT_TIMEOUT')}")
+
+if url_params:
+    if '?' in database_url:
+        database_url += '&' + '&'.join(url_params)
+    else:
+        database_url += '?' + '&'.join(url_params)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Configure database connection parameters
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'connect_args': {
-        'sslmode': os.getenv('POSTGRES_SSLMODE', 'require'),
-        'connect_timeout': int(os.getenv('POSTGRES_CONNECT_TIMEOUT', 30)),
-        'keepalives': int(os.getenv('POSTGRES_KEEPALIVES', 1)),
-        'keepalives_idle': int(os.getenv('POSTGRES_KEEPALIVES_IDLE', 30)),
-        'keepalives_interval': int(os.getenv('POSTGRES_KEEPALIVES_INTERVAL', 10)),
-        'keepalives_count': int(os.getenv('POSTGRES_KEEPALIVES_COUNT', 5))
-    },
     'pool_pre_ping': True,
     'pool_recycle': 300,
     'pool_timeout': 30,
@@ -70,13 +75,13 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'max_overflow': 5
 }
 
+# Initialize extensions
+init_extensions(app)
+
 # Configure upload folder
 app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', 'uploads')
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
-
-# Initialize extensions
-init_extensions(app)
 
 # Import models after extensions initialization
 from models import User, Verification, DMARCRecord, BlacklistMonitor, BlacklistEntry, CatchAllScore, AppSumoCode
@@ -99,15 +104,23 @@ def init_database():
         try:
             logger.info(f"Database initialization attempt {attempt + 1}/{max_retries}")
             
-            # Test database connection
+            # Test connection
             with db.engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
-                conn.commit()
             logger.info("Database connection successful")
             
-            # Create all tables
+            # Create tables
             db.create_all()
             logger.info("Database tables created successfully")
+            
+            # Ensure required columns exist
+            with db.engine.connect() as conn:
+                try:
+                    conn.execute(text("ALTER TABLE verifications ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
+                    conn.execute(text("ALTER TABLE verifications ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending'"))
+                    conn.commit()
+                except Exception as e:
+                    logger.warning(f"Column addition failed (may already exist): {str(e)}")
             
             # Create admin user if not exists
             admin = User.query.filter_by(email='admin@puremail.com').first()
@@ -116,7 +129,7 @@ def init_database():
                     username='admin',
                     email='admin@puremail.com',
                     is_admin=True,
-                    credits=9999999
+                    credits=1000000
                 )
                 admin.set_password('admin123')
                 db.session.add(admin)
@@ -126,7 +139,7 @@ def init_database():
                 logger.info("Admin user already exists")
             
             logger.info("Database initialization completed successfully")
-            return True
+            return
             
         except Exception as e:
             logger.error(f"Database initialization attempt {attempt + 1} failed: {str(e)}")
@@ -134,10 +147,10 @@ def init_database():
             if attempt < max_retries - 1:
                 logger.info(f"Retrying in {retry_delay} seconds...")
                 time.sleep(retry_delay)
-                retry_delay *= 2  # Exponential backoff
+                retry_delay *= 2
             else:
                 logger.error("All database initialization attempts failed")
-                raise
+                raise Exception(f"Failed to initialize database: {str(e)}")
 
 # Initialize database with app context
 with app.app_context():
