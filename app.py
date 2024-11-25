@@ -1,11 +1,11 @@
 # Import all required packages
 from datetime import datetime, timedelta
+import os
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, abort
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.urls import url_parse
 from werkzeug.utils import secure_filename
 from flask_login import login_user, login_required, logout_user, current_user
-import os
 import logging
 import pandas as pd
 import re
@@ -31,6 +31,9 @@ import traceback
 import shutil
 import time
 from sqlalchemy import text
+
+# Import Flask and extensions
+from extensions import db, migrate, login_manager, init_extensions
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -67,21 +70,18 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'max_overflow': 5
 }
 
-# Initialize extensions
-db.init_app(app)
-
 # Configure upload folder
 app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', 'uploads')
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
-# Import and initialize extensions
-from extensions import migrate, login_manager, init_extensions
+# Initialize extensions
 init_extensions(app)
 
 # Import models after extensions initialization
 from models import User, Verification, DMARCRecord, BlacklistMonitor, BlacklistEntry, CatchAllScore, AppSumoCode
 
+# Import and initialize login manager
 @login_manager.user_loader
 def load_user(user_id):
     try:
