@@ -417,24 +417,34 @@ def generate_excel_report(verification_id):
             cell = ws.cell(row=1, column=col, value=header)
             cell.style = header_style
 
-        # Get results
-        results = json.loads(verification.results) if verification.results else {}
-        valid_emails = results.get('valid_emails', [])
-        
-        # Add data
-        for row, email_data in enumerate(valid_emails, 2):
-            data = [
-                email_data.get('email', ''),
-                'Yes',
-                email_data.get('score', 0),
-                'Business' if email_data.get('is_business', False) else 'Personal',
-                email_data.get('industry', 'Unknown'),
-                email_data.get('pattern', 'Unknown')
-            ]
-            
-            for col, value in enumerate(data, 1):
-                cell = ws.cell(row=row, column=col, value=value)
-                cell.alignment = Alignment(horizontal='center')
+        # Get results from JSON string
+        try:
+            results = json.loads(verification.results) if verification.results else {}
+        except (json.JSONDecodeError, AttributeError) as e:
+            app.logger.error(f"Error decoding results JSON: {str(e)}")
+            results = {}
+
+        # Add data rows
+        row = 2
+        for email, result in results.items():
+            if result.get('valid', False):
+                score = round((result.get('reply_score', 0) + result.get('person_score', 0) + result.get('engagement_score', 0)) / 3, 1)
+                email_type = 'Business' if result.get('is_business', False) else 'Personal'
+                industry = result.get('industry', 'Unknown')
+                pattern = result.get('pattern', 'Unknown')
+
+                ws.cell(row=row, column=1, value=email)
+                ws.cell(row=row, column=2, value='Yes')
+                ws.cell(row=row, column=3, value=score)
+                ws.cell(row=row, column=4, value=email_type)
+                ws.cell(row=row, column=5, value=industry)
+                ws.cell(row=row, column=6, value=pattern)
+
+                # Center align all cells in the row
+                for col in range(1, 7):
+                    ws.cell(row=row, column=col).alignment = Alignment(horizontal='center')
+                
+                row += 1
 
         # Save workbook
         report_path = os.path.join(reports_dir, f'verification_report_{verification_id}.xlsx')
