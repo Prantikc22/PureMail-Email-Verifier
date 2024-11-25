@@ -12,7 +12,6 @@ services:
           try:
               db.session.execute('ALTER TABLE verifications ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
               db.session.execute('ALTER TABLE verifications ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT \'pending\'');
-              db.session.execute('ALTER TABLE verifications ADD COLUMN IF NOT EXISTS results TEXT');
               db.session.commit()
           except:
               db.session.rollback()
