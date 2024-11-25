@@ -872,23 +872,37 @@ def landing():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    form = FileUploadForm()  # Initialize the form
-    verifications = Verification.query.filter_by(user_id=current_user.id).order_by(Verification.created_at.desc()).all()
-    
-    total_codes = 0
-    active_codes = 0
-    redeemed_codes = 0
-    if current_user.id == 1:  # Admin user
-        total_codes = AppSumoCode.query.count()
-        active_codes = AppSumoCode.query.filter_by(status='active').count()
-        redeemed_codes = AppSumoCode.query.filter_by(status='redeemed').count()
-    
-    return render_template('dashboard.html',
-                         verifications=verifications,
-                         form=form,
-                         total_codes=total_codes,
-                         active_codes=active_codes,
-                         redeemed_codes=redeemed_codes)
+    """Dashboard view."""
+    try:
+        # Get user's verifications
+        verifications = Verification.query.filter_by(user_id=current_user.id).order_by(Verification.created_at.desc()).all()
+        
+        # Calculate email statistics
+        total_emails = sum(v.total_emails for v in verifications) if verifications else 0
+        valid_emails = sum(v.valid_emails for v in verifications) if verifications else 0
+        invalid_emails = total_emails - valid_emails if total_emails > 0 else 0
+        
+        # Get AppSumo code stats for admin
+        total_codes = 0
+        active_codes = 0
+        redeemed_codes = 0
+        if current_user.is_admin:
+            total_codes = AppSumoCode.query.count()
+            active_codes = AppSumoCode.query.filter_by(status='active').count()
+            redeemed_codes = AppSumoCode.query.filter_by(status='redeemed').count()
+        
+        return render_template('dashboard.html',
+                             verifications=verifications,
+                             total_emails=total_emails,
+                             valid_emails=valid_emails,
+                             invalid_emails=invalid_emails,
+                             total_codes=total_codes,
+                             active_codes=active_codes,
+                             redeemed_codes=redeemed_codes)
+    except Exception as e:
+        app.logger.error(f"Error in dashboard route: {str(e)}")
+        flash('An error occurred while loading the dashboard.', 'error')
+        return redirect(url_for('index'))
 
 @app.route('/verify', methods=['GET', 'POST'])
 @login_required

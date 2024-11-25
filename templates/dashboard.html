@@ -1,86 +1,101 @@
 {% extends "base.html" %}
-{% block title %}Dashboard - PureMail{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row">
-        <div class="col-md-12">
-            <h1>Welcome, {{ current_user.username }}!</h1>
-            <div class="card mb-4">
+<div class="container py-4">
+    <!-- Stats Cards Row -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
                 <div class="card-body">
-                    <h5 class="card-title">Your Credits</h5>
-                    <p class="card-text">{{ current_user.credits }}</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Email Verification</h5>
-                </div>
-                <div class="card-body">
-                    <form action="{{ url_for('verify') }}" method="post" enctype="multipart/form-data">
-                        {{ form.csrf_token }}
-                        <div class="form-group">
-                            <label for="file">Upload CSV File</label>
-                            {{ form.file(class="form-control") }}
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
+                            <i class="fas fa-envelope-open-text text-primary fa-2x"></i>
                         </div>
-                        <button type="submit" class="btn btn-primary mt-3">Verify Emails</button>
-                    </form>
+                        <div>
+                            <h6 class="card-subtitle mb-1 text-muted">Total Emails</h6>
+                            <h2 class="card-title mb-0">{{ total_emails }}</h2>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-
-    {% if verifications %}
-    <div class="row mt-4">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Recent Verifications</h5>
-                </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Status</th>
-                                    <th>Total Emails</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for verification in verifications %}
-                                <tr>
-                                    <td>{{ verification.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
-                                    <td>{{ verification.status }}</td>
-                                    <td>{{ verification.total_emails }}</td>
-                                    <td>
-                                        <a href="{{ url_for('download_report', verification_id=verification.id) }}" 
-                                           class="btn btn-sm btn-primary">
-                                            Download Results
-                                        </a>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle bg-success bg-opacity-10 p-3 me-3">
+                            <i class="fas fa-check-circle text-success fa-2x"></i>
+                        </div>
+                        <div>
+                            <h6 class="card-subtitle mb-1 text-muted">Valid Emails</h6>
+                            <h2 class="card-title mb-0">{{ valid_emails }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle bg-danger bg-opacity-10 p-3 me-3">
+                            <i class="fas fa-times-circle text-danger fa-2x"></i>
+                        </div>
+                        <div>
+                            <h6 class="card-subtitle mb-1 text-muted">Invalid Emails</h6>
+                            <h2 class="card-title mb-0">{{ invalid_emails }}</h2>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    {% endif %}
+
+    <!-- Action Cards Row -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100 hover-card">
+                <div class="card-body text-center py-4">
+                    <div class="rounded-circle bg-primary bg-opacity-10 p-3 mx-auto mb-3" style="width: fit-content;">
+                        <i class="fas fa-play-circle text-primary fa-3x"></i>
+                    </div>
+                    <h5 class="card-title">Start Verification</h5>
+                    <p class="card-text text-muted">Upload your email list and start verification process</p>
+                    <a href="{{ url_for('verify') }}" class="btn btn-primary mt-2">Verify Emails</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100 hover-card">
+                <div class="card-body text-center py-4">
+                    <div class="rounded-circle bg-info bg-opacity-10 p-3 mx-auto mb-3" style="width: fit-content;">
+                        <i class="fas fa-history text-info fa-3x"></i>
+                    </div>
+                    <h5 class="card-title">Verification History</h5>
+                    <p class="card-text text-muted">View your past verification results and reports</p>
+                    <a href="{{ url_for('history') }}" class="btn btn-info mt-2 text-white">View History</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100 hover-card">
+                <div class="card-body text-center py-4">
+                    <div class="rounded-circle bg-success bg-opacity-10 p-3 mx-auto mb-3" style="width: fit-content;">
+                        <i class="fas fa-user-circle text-success fa-3x"></i>
+                    </div>
+                    <h5 class="card-title">Profile Settings</h5>
+                    <p class="card-text text-muted">Manage your account and preferences</p>
+                    <a href="{{ url_for('profile') }}" class="btn btn-success mt-2">View Profile</a>
+                </div>
+            </div>
+        </div>
+    </div>
 
     {% if current_user.is_admin %}
     <!-- AppSumo Codes Section -->
-    <div class="row mt-4">
+    <div class="row">
         <div class="col-12">
-            <div class="card">
+            <div class="card border-0 shadow-sm">
                 <div class="card-body">
                     <h5 class="card-title">AppSumo Codes Management</h5>
                     <div class="row">
@@ -133,4 +148,13 @@
     </div>
     {% endif %}
 </div>
+
+<style>
+.hover-card {
+    transition: transform 0.2s ease-in-out;
+}
+.hover-card:hover {
+    transform: translateY(-5px);
+}
+</style>
 {% endblock %}
