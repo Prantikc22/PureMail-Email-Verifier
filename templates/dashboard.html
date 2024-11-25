@@ -75,5 +75,62 @@
         </div>
     </div>
     {% endif %}
+
+    {% if current_user.is_admin %}
+    <!-- AppSumo Codes Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">AppSumo Codes Management</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h6 class="card-subtitle mb-3">Import AppSumo Codes</h6>
+                                    <form action="{{ url_for('import_appsumo_codes') }}" method="post" enctype="multipart/form-data">
+                                        <div class="mb-3">
+                                            <label for="codesFile" class="form-label">Upload CSV File</label>
+                                            <input type="file" class="form-control" id="codesFile" name="file" accept=".csv" required>
+                                            <small class="text-muted">CSV should have codes in the first column</small>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Import Codes</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-subtitle mb-3">AppSumo Codes Statistics</h6>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="text-center">
+                                                <h3>{{ total_codes }}</h3>
+                                                <p class="mb-0">Total Codes</p>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="text-center">
+                                                <h3>{{ active_codes }}</h3>
+                                                <p class="mb-0">Active Codes</p>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="text-center">
+                                                <h3>{{ redeemed_codes }}</h3>
+                                                <p class="mb-0">Redeemed</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
