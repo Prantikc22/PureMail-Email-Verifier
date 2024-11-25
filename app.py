@@ -395,61 +395,31 @@ def generate_excel_report(verification_id):
     ws.title = "Verification Results"
 
     # Add title
-    ws.merge_cells('A1:I1')
+    ws.merge_cells('A1:B1')
     title_cell = ws['A1']
-    title_cell.value = "Email Verification Results"
+    title_cell.value = "Email Verification Report"
     title_cell.font = Font(size=14, bold=True)
     title_cell.alignment = Alignment(horizontal='center')
 
-    # Add headers
-    headers = [
-        'Email Address',
-        'Reply Likelihood\nScore (1-10)',
-        'Real Person\nScore (1-10)',
-        'Engagement\nScore (1-10)',
-        'Overall Rating',
-        'Industry Type',
-        'Business Email',
-        'Email Pattern',
-        'Domain\nReputation'
-    ]
-    ws.append([''] * len(headers))  # Empty row after title
-    header_row = ws.append(headers)
+    # Add summary section
+    ws.append(['Summary', ''])
+    ws.append(['Total Emails', verification.total_emails])
+    ws.append(['Valid Emails', verification.valid_emails])
+    ws.append(['Invalid Format', verification.invalid_format])
+    ws.append(['Disposable', verification.disposable])
+    ws.append(['DNS Error', verification.dns_error])
+    ws.append(['Role Based', verification.role_based])
     
-    # Style headers
-    for cell in ws[3]:  # Header is in row 3
-        cell.font = Font(bold=True)
-        cell.fill = PatternFill(start_color="E0E0E0", end_color="E0E0E0", fill_type="solid")
-        cell.alignment = Alignment(wrap_text=True, horizontal='center', vertical='center')
-        cell.border = Border(
-            left=Side(style='thin'),
-            right=Side(style='thin'),
-            top=Side(style='thin'),
-            bottom=Side(style='thin')
-        )
+    # Add scores section
+    ws.append(['', ''])  # Empty row
+    ws.append(['Scores', ''])
+    ws.append(['Average Score', f"{verification.avg_score:.2f}" if verification.avg_score else "N/A"])
+    ws.append(['Reply Score', f"{verification.reply_score:.2f}" if verification.reply_score else "N/A"])
+    ws.append(['Person Score', f"{verification.person_score:.2f}" if verification.person_score else "N/A"])
+    ws.append(['Engagement Score', f"{verification.engagement_score:.2f}" if verification.engagement_score else "N/A"])
 
-    # Add valid email data
-    valid_emails = EmailValidation.query.filter_by(verification_id=verification_id, is_valid=True).all()
-    
-    for email_validation in valid_emails:
-        overall_score = (email_validation.reply_score + email_validation.person_score + email_validation.engagement_score) / 3
-        rating = "High" if overall_score >= 8 else "Medium" if overall_score >= 5 else "Low"
-        
-        row_data = [
-            email_validation.email,
-            round(email_validation.reply_score, 1),
-            round(email_validation.person_score, 1),
-            round(email_validation.engagement_score, 1),
-            rating,
-            "Business" if "@" in email_validation.email and not any(d in email_validation.email for d in ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com']) else "Personal",
-            "Yes" if "@" in email_validation.email and not any(d in email_validation.email for d in ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com']) else "No",
-            "Name Format" if any(char.isalpha() for char in email_validation.email.split('@')[0]) else "Other",
-            round((email_validation.reply_score + email_validation.person_score) / 2, 1)
-        ]
-        ws.append(row_data)
-
-    # Style data rows
-    for row in ws.iter_rows(min_row=4, max_row=ws.max_row, min_col=1, max_col=len(headers)):
+    # Style the cells
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row, max_col=2):
         for cell in row:
             cell.border = Border(
                 left=Side(style='thin'),
@@ -457,58 +427,13 @@ def generate_excel_report(verification_id):
                 top=Side(style='thin'),
                 bottom=Side(style='thin')
             )
-            if isinstance(cell.value, (int, float)):
-                cell.alignment = Alignment(horizontal='center')
-            else:
-                cell.alignment = Alignment(horizontal='left')
-
-    # Add empty row
-    ws.append([''] * len(headers))
-
-    # Add score distribution
-    ws.append(['Score Distribution', '', '', '', '', '', '', '', ''])
-    ws.merge_cells(f'A{ws.max_row}:I{ws.max_row}')
-    ws[f'A{ws.max_row}'].font = Font(bold=True)
-
-    high_scores = sum(1 for e in valid_emails if (e.reply_score + e.person_score + e.engagement_score) / 3 >= 8)
-    medium_scores = sum(1 for e in valid_emails if 5 <= (e.reply_score + e.person_score + e.engagement_score) / 3 < 8)
-    low_scores = sum(1 for e in valid_emails if (e.reply_score + e.person_score + e.engagement_score) / 3 < 5)
-
-    ws.append([f'High Scoring Emails (8-10): {high_scores}', '', '', '', '', '', '', '', ''])
-    ws.append([f'Medium Scoring Emails (5-7): {medium_scores}', '', '', '', '', '', '', '', ''])
-    ws.append([f'Low Scoring Emails (1-4): {low_scores}', '', '', '', '', '', '', '', ''])
-
-    # Add score guide
-    ws.append([''] * len(headers))
-    ws.append(['Score Guide', '', '', '', '', '', '', '', ''])
-    ws.merge_cells(f'A{ws.max_row}:I{ws.max_row}')
-    ws[f'A{ws.max_row}'].font = Font(bold=True)
-
-    guide_text = [
-        'High (8-10): Excellent engagement potential, highly likely to be active and responsive',
-        'Medium (5-7): Good engagement potential, moderately active email users',
-        'Low (1-4): Limited engagement potential, may be inactive or less responsive'
-    ]
-
-    for text in guide_text:
-        ws.append([text, '', '', '', '', '', '', '', ''])
-        ws.merge_cells(f'A{ws.max_row}:I{ws.max_row}')
+            if cell.column == 1:  # First column
+                cell.font = Font(bold=True)
+                cell.fill = PatternFill(start_color="E0E0E0", end_color="E0E0E0", fill_type="solid")
 
     # Adjust column widths
-    column_widths = {
-        'A': 30,  # Email Address
-        'B': 15,  # Reply Score
-        'C': 15,  # Person Score
-        'D': 15,  # Engagement Score
-        'E': 15,  # Rating
-        'F': 15,  # Industry
-        'G': 15,  # Business
-        'H': 15,  # Pattern
-        'I': 15   # Domain
-    }
-
-    for col, width in column_widths.items():
-        ws.column_dimensions[col].width = width
+    ws.column_dimensions['A'].width = 20
+    ws.column_dimensions['B'].width = 15
 
     # Save the workbook
     report_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'reports')
