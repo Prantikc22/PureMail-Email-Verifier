@@ -37,6 +37,7 @@ class Verification(db.Model):
     reply_score = db.Column(db.Float, default=0.0)
     person_score = db.Column(db.Float, default=0.0)
     engagement_score = db.Column(db.Float, default=0.0)
+    results = db.Column(db.Text)  # Store JSON results
     
     # Relationships
     catch_all_scores = db.relationship('CatchAllScore', backref='verification', lazy=True)

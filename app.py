@@ -385,76 +385,22 @@ def calculate_ai_scores(email):
     }
 
 def generate_excel_report(verification_id):
+    """Return the path to the existing report."""
     try:
         verification = Verification.query.get(verification_id)
         if not verification:
             app.logger.error(f"Verification {verification_id} not found")
             return None
 
-        # Create reports directory
-        reports_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'reports')
-        os.makedirs(reports_dir, exist_ok=True)
-        
-        # Create workbook
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "Verification Results"
-
-        # Set column widths
-        columns = {'A': 40, 'B': 15, 'C': 15, 'D': 15, 'E': 20, 'F': 20}
-        for col, width in columns.items():
-            ws.column_dimensions[col].width = width
-
-        # Style for headers
-        header_style = NamedStyle(name='header_style')
-        header_style.font = Font(bold=True)
-        header_style.fill = PatternFill("solid", fgColor="CCCCCC")
-        header_style.alignment = Alignment(horizontal='center', wrap_text=True)
-
-        # Add headers
-        headers = ['Email Address', 'Valid', 'Score', 'Type', 'Industry', 'Pattern']
-        for col, header in enumerate(headers, 1):
-            cell = ws.cell(row=1, column=col, value=header)
-            cell.style = header_style
-
-        # Get results from JSON string
-        try:
-            results = json.loads(verification.results) if verification.results else {}
-        except (json.JSONDecodeError, AttributeError) as e:
-            app.logger.error(f"Error decoding results JSON: {str(e)}")
-            results = {}
-
-        # Add data rows
-        row = 2
-        for email, result in results.items():
-            if result.get('valid', False):
-                score = round((result.get('reply_score', 0) + result.get('person_score', 0) + result.get('engagement_score', 0)) / 3, 1)
-                email_type = 'Business' if result.get('is_business', False) else 'Personal'
-                industry = result.get('industry', 'Unknown')
-                pattern = result.get('pattern', 'Unknown')
-
-                ws.cell(row=row, column=1, value=email)
-                ws.cell(row=row, column=2, value='Yes')
-                ws.cell(row=row, column=3, value=score)
-                ws.cell(row=row, column=4, value=email_type)
-                ws.cell(row=row, column=5, value=industry)
-                ws.cell(row=row, column=6, value=pattern)
-
-                # Center align all cells in the row
-                for col in range(1, 7):
-                    ws.cell(row=row, column=col).alignment = Alignment(horizontal='center')
-                
-                row += 1
-
-        # Save workbook
-        report_path = os.path.join(reports_dir, f'verification_report_{verification_id}.xlsx')
-        wb.save(report_path)
-        
-        app.logger.info(f"Report generated at {report_path}")
-        return report_path
+        report_path = os.path.join(app.config['UPLOAD_FOLDER'], 'reports', f'verification_report_{verification_id}.xlsx')
+        if os.path.exists(report_path):
+            return report_path
+        else:
+            app.logger.error(f"Report file not found: {report_path}")
+            return None
 
     except Exception as e:
-        app.logger.error(f"Error generating Excel report: {str(e)}")
+        app.logger.error(f"Error accessing report: {str(e)}")
         return None
 
 def verify_email(email):
@@ -686,18 +632,26 @@ def process_file(filepath, user_id):
         total_reply_score = 0
         total_person_score = 0
         total_engagement_score = 0
-        results = {}
+        valid_emails = []
 
         for email in emails:
             email = email.strip()
             result = verify_email(email)
-            results[email] = result
             
             if result['valid']:
                 valid_count += 1
                 total_reply_score += result['reply_score']
                 total_person_score += result['person_score']
                 total_engagement_score += result['engagement_score']
+                valid_emails.append({
+                    'email': email,
+                    'reply_score': result['reply_score'],
+                    'person_score': result['person_score'],
+                    'engagement_score': result['engagement_score'],
+                    'is_business': result.get('is_business', False),
+                    'industry': result.get('industry', 'Unknown'),
+                    'pattern': result.get('pattern', 'Unknown')
+                })
             if result['invalid_format']:
                 invalid_format += 1
             elif result['disposable']:
@@ -727,12 +681,53 @@ def process_file(filepath, user_id):
             verification.avg_score = 7.0
             
         verification.status = 'Completed'
-        verification.results = json.dumps(results)
-        
-        # Generate Excel report
-        generate_excel_report(verification.id)
-        
         db.session.commit()
+
+        # Generate Excel report with valid emails
+        reports_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'reports')
+        os.makedirs(reports_dir, exist_ok=True)
+        report_path = os.path.join(reports_dir, f'verification_report_{verification.id}.xlsx')
+
+        # Create Excel workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Verification Results"
+
+        # Set column widths
+        columns = {'A': 40, 'B': 15, 'C': 15, 'D': 15, 'E': 20, 'F': 20}
+        for col, width in columns.items():
+            ws.column_dimensions[col].width = width
+
+        # Style for headers
+        header_style = NamedStyle(name='header_style')
+        header_style.font = Font(bold=True)
+        header_style.fill = PatternFill("solid", fgColor="CCCCCC")
+        header_style.alignment = Alignment(horizontal='center', wrap_text=True)
+
+        # Add headers
+        headers = ['Email Address', 'Valid', 'Score', 'Type', 'Industry', 'Pattern']
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.style = header_style
+
+        # Add data rows
+        for row, email_data in enumerate(valid_emails, 2):
+            score = round((email_data['reply_score'] + email_data['person_score'] + email_data['engagement_score']) / 3, 1)
+            
+            ws.cell(row=row, column=1, value=email_data['email'])
+            ws.cell(row=row, column=2, value='Yes')
+            ws.cell(row=row, column=3, value=score)
+            ws.cell(row=row, column=4, value='Business' if email_data['is_business'] else 'Personal')
+            ws.cell(row=row, column=5, value=email_data['industry'])
+            ws.cell(row=row, column=6, value=email_data['pattern'])
+
+            # Center align all cells in the row
+            for col in range(1, 7):
+                ws.cell(row=row, column=col).alignment = Alignment(horizontal='center')
+
+        # Save workbook
+        wb.save(report_path)
+        app.logger.info(f"Report generated at {report_path}")
         
         # Clean up uploaded file
         try:
@@ -746,7 +741,6 @@ def process_file(filepath, user_id):
         logger.error(f"Error processing file: {str(e)}\n{traceback.format_exc()}")
         if 'verification' in locals():
             verification.status = 'Failed'
-            verification.results = json.dumps({'error': str(e)})
             db.session.commit()
         try:
             os.remove(filepath)
