@@ -1,156 +1,74 @@
 {% extends "base.html" %}
+{% block title %}Dashboard - PureMail{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <h1 class="mb-4">Welcome, {{ current_user.username }}!</h1>
-    
-    <!-- Statistics Cards -->
-    <div class="row g-4 mb-5">
-        <!-- Total Verifications -->
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm stat-card bg-gradient">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted mb-2">Total Verifications</h6>
-                            <h3 class="mb-0">{{ stats.total_verifications }}</h3>
-                        </div>
-                        <div class="stat-icon bg-primary bg-opacity-10">
-                            <i class="fas fa-check-double text-primary"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Valid Emails -->
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm stat-card bg-gradient">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted mb-2">Valid Emails</h6>
-                            <h3 class="mb-0">{{ stats.valid_emails }}</h3>
-                        </div>
-                        <div class="stat-icon bg-success bg-opacity-10">
-                            <i class="fas fa-envelope-circle-check text-success"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Invalid Emails -->
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm stat-card bg-gradient">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted mb-2">Invalid Emails</h6>
-                            <h3 class="mb-0">{{ stats.invalid_emails }}</h3>
-                        </div>
-                        <div class="stat-icon bg-danger bg-opacity-10">
-                            <i class="fas fa-times-circle text-danger"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Feature Cards -->
-    <div class="row g-4">
-        <!-- Start Verification Box -->
-        <div class="col-md-4">
-            <a href="{{ url_for('verify') }}" class="text-decoration-none">
-                <div class="card h-100 border-0 shadow-sm hover-card">
-                    <div class="card-body text-center p-4">
-                        <div class="feature-icon mb-3">
-                            <i class="fas fa-rocket text-primary"></i>
-                        </div>
-                        <h3 class="card-title h4 mb-2">Start Verification</h3>
-                        <p class="card-text text-muted small">
-                            Verify emails with AI-powered validation
-                        </p>
-                    </div>
-                </div>
-            </a>
-        </div>
-        
-        <!-- History Box -->
-        <div class="col-md-4">
-            <a href="{{ url_for('history') }}" class="text-decoration-none">
-                <div class="card h-100 border-0 shadow-sm hover-card">
-                    <div class="card-body text-center p-4">
-                        <div class="feature-icon mb-3">
-                            <i class="fas fa-history text-success"></i>
-                        </div>
-                        <h3 class="card-title h4 mb-2">Verification History</h3>
-                        <p class="card-text text-muted small">
-                            Access past results and reports
-                        </p>
-                    </div>
-                </div>
-            </a>
-        </div>
-        
-        <!-- Profile Box -->
-        <div class="col-md-4">
-            <a href="{{ url_for('profile') }}" class="text-decoration-none">
-                <div class="card h-100 border-0 shadow-sm hover-card">
-                    <div class="card-body text-center p-4">
-                        <div class="feature-icon mb-3">
-                            <i class="fas fa-user-gear text-info"></i>
-                        </div>
-                        <h3 class="card-title h4 mb-2">Profile Settings</h3>
-                        <p class="card-text text-muted small">
-                            Manage your account preferences
-                        </p>
-                    </div>
-                </div>
-            </a>
-        </div>
-    </div>
-    
-    <!-- AppSumo Code Management -->
-    {% if current_user.is_authenticated and current_user.id == 1 %}
-    <div class="row mt-5">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm">
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <h1>Welcome, {{ current_user.username }}!</h1>
+            <div class="card mb-4">
                 <div class="card-body">
-                    <h5 class="card-title mb-4">AppSumo Code Management</h5>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <form action="{{ url_for('import_appsumo_codes') }}" method="post" enctype="multipart/form-data" class="mb-3">
-                                <div class="mb-3">
-                                    <label class="form-label">Import AppSumo Codes</label>
-                                    <input type="file" name="file" class="form-control" accept=".xlsx" required>
-                                    <small class="text-muted">Upload Excel file with 'Codes' column</small>
-                                </div>
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-upload me-2"></i>Import Codes
-                                </button>
-                            </form>
+                    <h5 class="card-title">Your Credits</h5>
+                    <p class="card-text">{{ current_user.credits }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Email Verification</h5>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('verify_email') }}" method="post" enctype="multipart/form-data">
+                        {{ form.csrf_token }}
+                        <div class="form-group">
+                            <label for="file">Upload CSV File</label>
+                            {{ form.file(class="form-control") }}
                         </div>
-                        <div class="col-md-6">
-                            <div class="card bg-light border-0">
-                                <div class="card-body">
-                                    <h6 class="card-title mb-3">AppSumo Codes Status</h6>
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <span>Total Codes:</span>
-                                        <span class="badge bg-primary">{{ total_codes }}</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <span>Active Codes:</span>
-                                        <span class="badge bg-success">{{ active_codes }}</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span>Redeemed Codes:</span>
-                                        <span class="badge bg-warning">{{ redeemed_codes }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <button type="submit" class="btn btn-primary mt-3">Verify Emails</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if verifications %}
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Recent Verifications</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th>Total Emails</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for verification in verifications %}
+                                <tr>
+                                    <td>{{ verification.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                    <td>{{ verification.status }}</td>
+                                    <td>{{ verification.total_emails }}</td>
+                                    <td>
+                                        <a href="{{ url_for('download_results', verification_id=verification.id) }}" 
+                                           class="btn btn-sm btn-primary">
+                                            Download Results
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -158,58 +76,4 @@
     </div>
     {% endif %}
 </div>
-
-<style>
-    .hover-card {
-        transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-    }
-    
-    .hover-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
-    }
-    
-    .feature-icon {
-        background: rgba(var(--bs-primary-rgb), 0.1);
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto;
-    }
-    
-    .feature-icon i {
-        font-size: 1.5rem;
-    }
-    
-    .stat-card {
-        transition: transform 0.3s ease;
-    }
-    
-    .stat-card:hover {
-        transform: translateY(-3px);
-    }
-    
-    .stat-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    
-    .stat-icon i {
-        font-size: 1.5rem;
-        display: inline-block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-    }
-    
-    .bg-gradient {
-        background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
-    }
-</style>
 {% endblock %}

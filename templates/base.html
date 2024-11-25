@@ -311,7 +311,7 @@
     <!-- Sidebar for authenticated pages except index -->
     <nav id="sidebar">
         <div class="logo-container">
-            <a href="{{ url_for('index') }}" class="logo" aria-label="PureMail"></a>
+            <a href="{{ url_for('landing') }}" class="logo" aria-label="PureMail"></a>
         </div>
         <ul class="nav flex-column">
             <li class="nav-item">
@@ -361,7 +361,7 @@
         {% if request.endpoint == 'index' %}
         <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm mb-4">
             <div class="container">
-                <a class="navbar-brand" href="{{ url_for('index') }}">
+                <a class="navbar-brand" href="{{ url_for('landing') }}">
                     <img src="{{ url_for('static', filename='images/logo.png') }}" alt="PureMail" class="img-fluid" style="max-height: 40px;">
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">

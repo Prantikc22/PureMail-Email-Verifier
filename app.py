@@ -30,6 +30,7 @@ import click
 import traceback
 import shutil
 import time
+from sqlalchemy import text
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -94,7 +95,8 @@ def init_database():
             
             # Test database connection
             with db.engine.connect() as conn:
-                conn.execute("SELECT 1")
+                conn.execute(text("SELECT 1"))
+                conn.commit()
             logger.info("Database connection successful")
             
             # Create all tables
@@ -902,6 +904,12 @@ def process_file(filepath, user_id):
         raise
 
 @app.route('/')
+def index():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    return render_template('landing.html')
+
+@app.route('/landing')
 def landing():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
