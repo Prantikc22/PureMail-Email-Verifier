@@ -109,7 +109,20 @@ section {
 }
 
 .navbar.scrolled {
-    background-color: #1a1a1a;
+    background-color: #0d6efd !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.navbar.scrolled .nav-link {
+    color: white !important;
+}
+
+.navbar.scrolled .navbar-brand {
+    color: white !important;
+}
+
+.navbar {
+    transition: background-color 0.3s ease;
 }
 
 .navbar-brand {
