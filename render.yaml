@@ -5,7 +5,9 @@ services:
     buildCommand: |
       pip install -r requirements.txt
       python -c "from app import app; from extensions import db; with app.app_context(): db.create_all()"
-    startCommand: gunicorn app:app --timeout 180 --workers 4 --threads 2 --max-requests 1000 --max-requests-jitter 50 --preload
+    startCommand: |
+      export PYTHONPATH=/opt/render/project/src:$PYTHONPATH
+      gunicorn --preload --workers 4 --threads 2 --timeout 180 --max-requests 1000 --max-requests-jitter 50 'app:app'
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
@@ -29,6 +31,8 @@ services:
         value: require
       - key: POSTGRES_SSLMODE
         value: require
+      - key: PYTHONPATH
+        value: /opt/render/project/src
     healthCheckPath: /
     autoDeploy: false
     disk:
