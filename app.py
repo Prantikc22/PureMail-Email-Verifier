@@ -17,7 +17,7 @@ import secrets
 import string
 from email_validator import validate_email, EmailNotValidError
 from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side, NamedStyle
 from openpyxl.utils import get_column_letter
 import xlsxwriter
 import uuid
@@ -385,155 +385,67 @@ def calculate_ai_scores(email):
     }
 
 def generate_excel_report(verification_id):
-    verification = Verification.query.get(verification_id)
-    if not verification:
-        return None
+    try:
+        verification = Verification.query.get(verification_id)
+        if not verification:
+            app.logger.error(f"Verification {verification_id} not found")
+            return None
 
-    # Create a new Excel workbook
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Verification Results"
+        # Create reports directory
+        reports_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'reports')
+        os.makedirs(reports_dir, exist_ok=True)
+        
+        # Create workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Verification Results"
 
-    # Add title
-    ws.merge_cells('A1:I1')
-    title_cell = ws['A1']
-    title_cell.value = "Email Verification Results"
-    title_cell.font = Font(size=14, bold=True)
-    title_cell.alignment = Alignment(horizontal='center')
+        # Set column widths
+        columns = {'A': 40, 'B': 15, 'C': 15, 'D': 15, 'E': 20, 'F': 20}
+        for col, width in columns.items():
+            ws.column_dimensions[col].width = width
 
-    # Add headers
-    headers = [
-        'Email Address',
-        'Reply Likelihood\nScore (1-10)',
-        'Real Person\nScore (1-10)',
-        'Engagement\nScore (1-10)',
-        'Overall Rating',
-        'Industry Type',
-        'Business Email',
-        'Email Pattern',
-        'Domain\nReputation'
-    ]
-    ws.append([''] * len(headers))  # Empty row after title
-    header_row = ws.append(headers)
-    
-    # Style headers
-    for cell in ws[3]:  # Header is in row 3
-        cell.font = Font(bold=True)
-        cell.fill = PatternFill(start_color="E0E0E0", end_color="E0E0E0", fill_type="solid")
-        cell.alignment = Alignment(wrap_text=True, horizontal='center', vertical='center')
-        cell.border = Border(
-            left=Side(style='thin'),
-            right=Side(style='thin'),
-            top=Side(style='thin'),
-            bottom=Side(style='thin')
-        )
+        # Style for headers
+        header_style = NamedStyle(name='header_style')
+        header_style.font = Font(bold=True)
+        header_style.fill = PatternFill("solid", fgColor="CCCCCC")
+        header_style.alignment = Alignment(horizontal='center', wrap_text=True)
 
-    # Add email data
-    results = json.loads(verification.results) if verification.results else {}
-    high_scores = 0
-    medium_scores = 0
-    low_scores = 0
+        # Add headers
+        headers = ['Email Address', 'Valid', 'Score', 'Type', 'Industry', 'Pattern']
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.style = header_style
 
-    for email, result in results.items():
-        if result.get('valid', False):
-            reply_score = result.get('reply_score', 0)
-            person_score = result.get('person_score', 0)
-            engagement_score = result.get('engagement_score', 0)
-            overall_score = (reply_score + person_score + engagement_score) / 3
-            
-            # Determine rating
-            if overall_score >= 8:
-                rating = "High"
-                high_scores += 1
-            elif overall_score >= 5:
-                rating = "Medium"
-                medium_scores += 1
-            else:
-                rating = "Low"
-                low_scores += 1
-
-            # Determine email type and pattern
-            is_business = not any(domain in email.lower() for domain in ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com'])
-            has_name = any(char.isalpha() for char in email.split('@')[0])
-            
-            row_data = [
-                email,
-                round(reply_score, 1),
-                round(person_score, 1),
-                round(engagement_score, 1),
-                rating,
-                "Business" if is_business else "Personal",
-                "Yes" if is_business else "No",
-                "Name Format" if has_name else "Other",
-                round((reply_score + person_score) / 2, 1)
+        # Get results
+        results = json.loads(verification.results) if verification.results else {}
+        valid_emails = results.get('valid_emails', [])
+        
+        # Add data
+        for row, email_data in enumerate(valid_emails, 2):
+            data = [
+                email_data.get('email', ''),
+                'Yes',
+                email_data.get('score', 0),
+                'Business' if email_data.get('is_business', False) else 'Personal',
+                email_data.get('industry', 'Unknown'),
+                email_data.get('pattern', 'Unknown')
             ]
-            ws.append(row_data)
-
-    # Style data rows
-    for row in ws.iter_rows(min_row=4, max_row=ws.max_row, min_col=1, max_col=len(headers)):
-        for cell in row:
-            cell.border = Border(
-                left=Side(style='thin'),
-                right=Side(style='thin'),
-                top=Side(style='thin'),
-                bottom=Side(style='thin')
-            )
-            if isinstance(cell.value, (int, float)):
+            
+            for col, value in enumerate(data, 1):
+                cell = ws.cell(row=row, column=col, value=value)
                 cell.alignment = Alignment(horizontal='center')
-            else:
-                cell.alignment = Alignment(horizontal='left')
 
-    # Add empty row
-    ws.append([''] * len(headers))
+        # Save workbook
+        report_path = os.path.join(reports_dir, f'verification_report_{verification_id}.xlsx')
+        wb.save(report_path)
+        
+        app.logger.info(f"Report generated at {report_path}")
+        return report_path
 
-    # Add score distribution
-    ws.append(['Score Distribution', '', '', '', '', '', '', '', ''])
-    ws.merge_cells(f'A{ws.max_row}:I{ws.max_row}')
-    ws[f'A{ws.max_row}'].font = Font(bold=True)
-
-    ws.append([f'High Scoring Emails (8-10): {high_scores}', '', '', '', '', '', '', '', ''])
-    ws.append([f'Medium Scoring Emails (5-7): {medium_scores}', '', '', '', '', '', '', '', ''])
-    ws.append([f'Low Scoring Emails (1-4): {low_scores}', '', '', '', '', '', '', '', ''])
-
-    # Add score guide
-    ws.append([''] * len(headers))
-    ws.append(['Score Guide', '', '', '', '', '', '', '', ''])
-    ws.merge_cells(f'A{ws.max_row}:I{ws.max_row}')
-    ws[f'A{ws.max_row}'].font = Font(bold=True)
-
-    guide_text = [
-        'High (8-10): Excellent engagement potential, highly likely to be active and responsive',
-        'Medium (5-7): Good engagement potential, moderately active email users',
-        'Low (1-4): Limited engagement potential, may be inactive or less responsive'
-    ]
-
-    for text in guide_text:
-        ws.append([text, '', '', '', '', '', '', '', ''])
-        ws.merge_cells(f'A{ws.max_row}:I{ws.max_row}')
-
-    # Adjust column widths
-    column_widths = {
-        'A': 30,  # Email Address
-        'B': 15,  # Reply Score
-        'C': 15,  # Person Score
-        'D': 15,  # Engagement Score
-        'E': 15,  # Rating
-        'F': 15,  # Industry
-        'G': 15,  # Business
-        'H': 15,  # Pattern
-        'I': 15   # Domain
-    }
-
-    for col, width in column_widths.items():
-        ws.column_dimensions[col].width = width
-
-    # Save the workbook
-    report_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'reports')
-    os.makedirs(report_dir, exist_ok=True)
-    report_path = os.path.join(report_dir, f'verification_report_{verification_id}.xlsx')
-    wb.save(report_path)
-
-    return report_path
+    except Exception as e:
+        app.logger.error(f"Error generating Excel report: {str(e)}")
+        return None
 
 def verify_email(email):
     """Verify a single email address with comprehensive checks."""
@@ -1077,26 +989,40 @@ def logout():
 @app.route('/download_report/<int:verification_id>')
 @login_required
 def download_report(verification_id):
-    verification = Verification.query.get_or_404(verification_id)
-    
-    # Check if user owns this verification
-    if verification.user_id != current_user.id:
-        abort(403)
-    
-    report_path = generate_excel_report(verification_id)
-    if not report_path:
-        flash('Error generating report', 'error')
-        return redirect(url_for('dashboard'))
-    
     try:
-        return send_file(
-            report_path,
-            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            as_attachment=True,
-            download_name=f'verification_report_{verification_id}.xlsx'
-        )
+        verification = Verification.query.get_or_404(verification_id)
+        
+        # Check if user owns this verification
+        if verification.user_id != current_user.id:
+            app.logger.error(f"User {current_user.id} attempted to access verification {verification_id} owned by {verification.user_id}")
+            abort(403)
+        
+        # Generate the report
+        try:
+            report_path = generate_excel_report(verification_id)
+            if not report_path or not os.path.exists(report_path):
+                app.logger.error(f"Report generation failed for verification {verification_id}")
+                flash('Error generating report', 'error')
+                return redirect(url_for('dashboard'))
+        except Exception as e:
+            app.logger.error(f"Error generating report for verification {verification_id}: {str(e)}")
+            flash('Error generating report', 'error')
+            return redirect(url_for('dashboard'))
+        
+        try:
+            return send_file(
+                report_path,
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                as_attachment=True,
+                download_name=f'verification_report_{verification_id}.xlsx'
+            )
+        except Exception as e:
+            app.logger.error(f"Error sending file {report_path}: {str(e)}")
+            flash('Error downloading report', 'error')
+            return redirect(url_for('dashboard'))
+            
     except Exception as e:
-        app.logger.error(f"Error sending file: {e}")
+        app.logger.error(f"Error in download_report for verification {verification_id}: {str(e)}")
         flash('Error downloading report', 'error')
         return redirect(url_for('dashboard'))
 
