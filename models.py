@@ -105,3 +105,4 @@ class AppSumoCode(db.Model):
     redeemed_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(20), default='active')  # active, redeemed, expired
+    is_redeemed = db.Column(db.Boolean, default=False)
