@@ -15,6 +15,67 @@
         </div>
     </div>
 
+    {% if current_user.is_admin %}
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">AppSumo Code Management</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">Total Codes</h6>
+                                    <p class="card-text h4">{{ total_codes }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">Active Codes</h6>
+                                    <p class="card-text h4">{{ active_codes }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">Redeemed Codes</h6>
+                                    <p class="card-text h4">{{ redeemed_codes }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Generate New Codes</h6>
+                            <form action="{{ url_for('generate_appsumo_codes') }}" method="post" class="mb-3">
+                                <div class="input-group">
+                                    <input type="number" name="count" class="form-control" placeholder="Number of codes" required>
+                                    <button type="submit" class="btn btn-primary">Generate</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Import Codes</h6>
+                            <form action="{{ url_for('import_appsumo_codes') }}" method="post" enctype="multipart/form-data" class="mb-3">
+                                <div class="input-group">
+                                    <input type="file" name="file" class="form-control" accept=".csv,.txt" required>
+                                    <button type="submit" class="btn btn-primary">Import</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="row">
         <div class="col-md-12">
             <div class="card">

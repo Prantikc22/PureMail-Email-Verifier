@@ -1018,7 +1018,7 @@ def verify():
 @app.route('/history')
 @login_required
 def history():
-    verifications = Verification.query.filter_by(user_id=current_user.id).order_by(Verification.date.desc()).all()
+    verifications = Verification.query.filter_by(user_id=current_user.id).order_by(Verification.created_at.desc()).all()
     return render_template('history.html', verifications=verifications)
 
 @app.route('/profile', methods=['GET', 'POST'])
