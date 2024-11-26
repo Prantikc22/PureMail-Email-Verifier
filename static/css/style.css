@@ -103,9 +103,9 @@ section {
 
 /* Navbar Styles */
 .navbar {
-    background-color: transparent;
-    transition: background-color 0.3s ease;
+    background: transparent;
     padding: 1rem 0;
+    transition: all 0.3s ease;
 }
 
 .navbar.scrolled {
@@ -113,36 +113,35 @@ section {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.navbar.scrolled .nav-link {
-    color: white !important;
-}
-
-.navbar.scrolled .navbar-brand {
-    color: white !important;
-}
-
-.navbar {
-    transition: background-color 0.3s ease;
-}
-
 .navbar-brand {
+    color: white !important;
     font-weight: 600;
     font-size: 1.5rem;
 }
 
-.navbar .badge {
-    font-size: 0.9rem;
+.navbar .nav-link {
+    color: white !important;
     font-weight: 500;
+    padding: 0.5rem 1rem !important;
+}
+
+.navbar .nav-link:hover {
+    color: rgba(255,255,255,0.8) !important;
+}
+
+.navbar .logo {
+    height: 40px;
+    width: auto;
+}
+
+/* AppSumo Badge */
+.navbar .badge {
+    font-weight: 600;
     transition: transform 0.2s ease;
 }
 
 .navbar .badge:hover {
-    transform: translateY(-1px);
-}
-
-.navbar .nav-link {
-    font-weight: 500;
-    padding: 0.5rem 1rem;
+    transform: scale(1.05);
 }
 
 .navbar-dark .navbar-nav .nav-link {
