@@ -117,6 +117,8 @@ section {
     color: white !important;
     font-weight: 600;
     font-size: 1.5rem;
+    display: flex;
+    align-items: center;
 }
 
 .navbar .nav-link {
@@ -130,8 +132,9 @@ section {
 }
 
 .navbar .logo {
-    height: 40px;
+    height: 55px;
     width: auto;
+    margin-right: 10px;
 }
 
 /* AppSumo Badge */
